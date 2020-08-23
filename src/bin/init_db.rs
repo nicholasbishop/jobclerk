@@ -17,4 +17,8 @@ async fn main() {
     client
         .batch_execute(include_str!("../../db/init.sql"))
         .await?;
+
+    client
+        .batch_execute(include_str!("../../db/test.sql"))
+        .await?;
 }

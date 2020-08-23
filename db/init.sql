@@ -1,9 +1,9 @@
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL
 );
 
-CREATE TABLE jobs (
+CREATE TABLE IF NOT EXISTS jobs (
   id BIGSERIAL PRIMARY KEY,
   project BIGINT REFERENCES projects NOT NULL,
   -- Valid states: idle, running, canceling, canceled, succeeded,
