@@ -1,1 +1,1 @@
-INSERT INTO projects (name) VALUES ('e-m');
+INSERT INTO projects (name) VALUES ('testproj');

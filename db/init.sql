@@ -8,12 +8,12 @@ CREATE TABLE IF NOT EXISTS jobs (
   project BIGINT REFERENCES projects NOT NULL,
   -- Valid states: idle, running, canceling, canceled, succeeded,
   -- failed
-  state TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'idle',
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   started TIMESTAMP,
   finished TIMESTAMP,
   -- An additional layer of priority beyond just getting the
   -- earliest-created available job.
-  priority INT NOT NULL,
+  priority INT NOT NULL DEFAULT 0,
   data JSONB NOT NULL
 );
