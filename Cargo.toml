@@ -8,6 +8,13 @@ edition = "2018"
 actix-rt = "1.1"
 actix-web = "2.0"
 anyhow = "1.0"
+askama = "0.10"
+bb8 = "0.4.0"
+bb8-postgres = "0.4.0"
+env_logger = "0.7"
 fehler = "1.0"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
 tokio = { version = "0.2", features = ["macros"] }
 tokio-postgres = "0.5"
