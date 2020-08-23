@@ -4,7 +4,7 @@ import requests
 
 def main():
     base_url = 'http://127.0.0.1:8000'
-    resp = requests.post(base_url + '/projects/testproj/jobs', json={
+    resp = requests.post(base_url + '/api/projects/testproj/jobs', json={
         'hello': 'world',
     })
     print(resp.text)

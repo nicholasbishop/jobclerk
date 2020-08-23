@@ -84,7 +84,7 @@ async fn main() {
         App::new()
             .data(pool.clone())
             .route("/projects", web::get().to(list_projects))
-            .route("/projects/{project}/jobs", web::post().to(add_job))
+            .route("/api/projects/{project}/jobs", web::post().to(add_job))
     })
     .bind("127.0.0.1:8000")?
     .run()
