@@ -49,7 +49,7 @@ type ProjectId = i64;
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum JobState {
-    Idle,
+    Available,
     Activating,
     Running,
     Canceling,
@@ -138,6 +138,30 @@ async fn api_add_job(
     HttpResponse::Ok().json(AddJobResponse { job_id })
 }
 
+#[throws]
+async fn api_request_job(
+    pool: web::Data<Pool>,
+    path: web::Path<(String,)>,
+) -> impl Responder {
+    // Sketch of the protocol:
+    //
+    // client calls /projects/blah/request-job
+    //
+    // server atomically finds an available job and marks it as
+    // running. as part of that atomic operation a unique (random)
+    // "owner" ID is set in the job's row.
+    //
+    // request-job returns that job ID and owner ID.
+    //
+    // The client can now use those IDs to update the job with a patch
+    // request or similar. Note that only a client with the correct
+    // owner ID can update the job, as a layer of protection against
+    // clients fighting over the same job.
+    
+
+    // TODO
+}
+
 #[throws(anyhow::Error)]
 #[actix_rt::main]
 async fn main() {
@@ -157,6 +181,10 @@ async fn main() {
             .route("/projects", web::get().to(list_projects))
             .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
             .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
+            .route(
+                "/api/projects/{project}/request-job",
+                web::post().to(api_request_job),
+            )
     })
     .bind("127.0.0.1:8000")?
     .run()
