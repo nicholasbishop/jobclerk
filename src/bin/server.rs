@@ -158,6 +158,13 @@ struct TakeJobResponse {
     job_token: Option<JobToken>,
 }
 
+/// Take ownership of an available job.
+///
+/// This gets the highest priority job with the oldest creation that
+/// is available for this project and marks it as running. The job's
+/// runner is set to the input runner, and a unique token is generated
+/// so that the runner can send updates. (Updates that do not include
+/// the correct token are rejected.)
 #[throws]
 async fn api_take_job(
     pool: web::Data<Pool>,
@@ -189,23 +196,6 @@ async fn api_take_job(
             job_token: Some(row.get(1)),
         })
     }
-
-    // Sketch of the protocol:
-    //
-    // client calls /projects/blah/take-job
-    //
-    // server atomically finds an available job and marks it as
-    // running. as part of that atomic operation a unique (random)
-    // "owner" ID is set in the job's row.
-    //
-    // take-job returns that job ID and owner ID.
-    //
-    // The client can now use those IDs to update the job with a patch
-    // take or similar. Note that only a client with the correct
-    // owner ID can update the job, as a layer of protection against
-    // clients fighting over the same job.
-
-    // TODO
 }
 
 #[throws(anyhow::Error)]
