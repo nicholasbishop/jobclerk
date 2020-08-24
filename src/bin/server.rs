@@ -139,13 +139,13 @@ async fn api_add_job(
 }
 
 #[derive(Debug, Serialize)]
-struct RequestJobResponse {
+struct TakeJobResponse {
     job_id: Option<JobId>,
     job_token: Option<JobToken>,
 }
 
 #[throws]
-async fn api_request_job(
+async fn api_take_job(
     pool: web::Data<Pool>,
     path: web::Path<(String,)>,
 ) -> impl Responder {
@@ -155,13 +155,13 @@ async fn api_request_job(
     let rows = conn.query("TODO", &[]).await?;
 
     if rows.is_empty() {
-        HttpResponse::Ok().json(RequestJobResponse {
+        HttpResponse::Ok().json(TakeJobResponse {
             job_id: None,
             job_token: None,
         })
     } else {
         let row = &rows[0];
-        HttpResponse::Ok().json(RequestJobResponse {
+        HttpResponse::Ok().json(TakeJobResponse {
             job_id: Some(row.get(0)),
             job_token: Some(row.get(1)),
         })
@@ -169,16 +169,16 @@ async fn api_request_job(
 
     // Sketch of the protocol:
     //
-    // client calls /projects/blah/request-job
+    // client calls /projects/blah/take-job
     //
     // server atomically finds an available job and marks it as
     // running. as part of that atomic operation a unique (random)
     // "owner" ID is set in the job's row.
     //
-    // request-job returns that job ID and owner ID.
+    // take-job returns that job ID and owner ID.
     //
     // The client can now use those IDs to update the job with a patch
-    // request or similar. Note that only a client with the correct
+    // take or similar. Note that only a client with the correct
     // owner ID can update the job, as a layer of protection against
     // clients fighting over the same job.
 
@@ -205,8 +205,8 @@ async fn main() {
             .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
             .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
             .route(
-                "/api/projects/{project}/request-job",
-                web::post().to(api_request_job),
+                "/api/projects/{project}/take-job",
+                web::post().to(api_take_job),
             )
     })
     .bind("127.0.0.1:8000")?

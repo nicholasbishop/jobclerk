@@ -7,10 +7,10 @@ import requests
 def main():
     add_job = 'add-job'
     get_jobs = 'get-jobs'
-    request_job = 'request-job'
+    take_job = 'take-job'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('cmd', choices=(add_job, get_jobs, request_job))
+    parser.add_argument('cmd', choices=(add_job, get_jobs, take_job))
     args = parser.parse_args()
 
     base_url = 'http://127.0.0.1:8000'
@@ -21,8 +21,8 @@ def main():
         resp = requests.post(base_url + '/api/projects/testproj/jobs', json={
             'hello': 'world',
         })
-    elif args.cmd == request_job:
-        resp = requests.post(base_url + '/api/projects/testproj/request-job')
+    elif args.cmd == take_job:
+        resp = requests.post(base_url + '/api/projects/testproj/take-job')
 
     pprint.pprint(resp.json())
     resp.raise_for_status()
