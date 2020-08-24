@@ -72,7 +72,10 @@ struct Job {
 }
 
 #[throws]
-async fn api_get_jobs(pool: web::Data<Pool>, path: web::Path<(String,)>) -> impl Responder {
+async fn api_get_jobs(
+    pool: web::Data<Pool>,
+    path: web::Path<(String,)>,
+) -> impl Responder {
     let project_name = &path.0;
 
     let conn = pool.get().await?;
@@ -140,8 +143,10 @@ async fn api_add_job(
 async fn main() {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
-    let db_manager =
-        PostgresConnectionManager::new_from_stringlike("host=localhost user=postgres", NoTls)?;
+    let db_manager = PostgresConnectionManager::new_from_stringlike(
+        "host=localhost user=postgres",
+        NoTls,
+    )?;
 
     let pool = Pool::builder().build(db_manager).await?;
 
