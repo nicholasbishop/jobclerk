@@ -157,7 +157,6 @@ async fn api_request_job(
     // request or similar. Note that only a client with the correct
     // owner ID can update the job, as a layer of protection against
     // clients fighting over the same job.
-    
 
     // TODO
 }
