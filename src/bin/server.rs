@@ -46,6 +46,7 @@ type JobId = i64;
 type ProjectId = i64;
 
 #[derive(Debug, Serialize, EnumString)]
+#[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum JobState {
     Idle,
