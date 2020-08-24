@@ -1,10 +1,12 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use askama::Template;
 use bb8_postgres::PostgresConnectionManager;
+use chrono::{DateTime, Utc};
 use env_logger::Env;
 use fehler::throws;
 use log::info;
 use serde::Serialize;
+use strum_macros::EnumString;
 use tokio_postgres::NoTls;
 
 type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
@@ -17,6 +19,8 @@ enum Error {
     Pool(#[from] bb8::RunError<tokio_postgres::Error>),
     #[error("template error: {0}")]
     Template(#[from] askama::Error),
+    #[error("parse error: {0}")]
+    Parse(#[from] strum::ParseError),
 }
 
 impl actix_web::error::ResponseError for Error {}
@@ -39,6 +43,67 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
 }
 
 type JobId = i64;
+type ProjectId = i64;
+
+#[derive(Debug, Serialize, EnumString)]
+#[strum(serialize_all = "snake_case")]
+enum JobState {
+    Idle,
+    Activating,
+    Running,
+    Canceling,
+    Canceled,
+    Succeeded,
+    Failed,
+}
+
+#[derive(Debug, Serialize)]
+struct Job {
+    id: JobId,
+    project_name: String,
+    project_id: ProjectId,
+    state: JobState,
+    created: DateTime<Utc>,
+    started: Option<DateTime<Utc>>,
+    finished: Option<DateTime<Utc>>,
+    priority: i32,
+    data: serde_json::Value,
+}
+
+#[throws]
+async fn api_get_jobs(pool: web::Data<Pool>, path: web::Path<(String,)>) -> impl Responder {
+    let project_name = &path.0;
+
+    let conn = pool.get().await?;
+    let rows = conn
+        .query(
+            "SELECT id, project, state, created, started, finished, priority, data
+             FROM jobs
+             WHERE project = (SELECT id FROM projects WHERE name = $1)",
+            &[project_name],
+        )
+        .await?;
+
+    let jobs = rows
+        .iter()
+        .map(|row| -> Result<Job, Error> {
+            let state: String = row.get(2);
+            Ok(Job {
+                id: row.get(0),
+                project_name: project_name.clone(),
+                project_id: row.get(1),
+                state: state.parse()?,
+                created: row.get(3),
+                started: row.get(4),
+                finished: row.get(5),
+                priority: row.get(6),
+                data: row.get(7),
+            })
+        })
+        .collect::<Result<Vec<Job>, _>>()?;
+
+    HttpResponse::Ok().json(jobs)
+}
 
 #[derive(Debug, Serialize)]
 struct AddJobResponse {
@@ -46,7 +111,7 @@ struct AddJobResponse {
 }
 
 #[throws]
-async fn add_job(
+async fn api_add_job(
     pool: web::Data<Pool>,
     path: web::Path<(String,)>,
     data: web::Json<serde_json::Value>,
@@ -84,7 +149,8 @@ async fn main() {
         App::new()
             .data(pool.clone())
             .route("/projects", web::get().to(list_projects))
-            .route("/api/projects/{project}/jobs", web::post().to(add_job))
+            .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
+            .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
     })
     .bind("127.0.0.1:8000")?
     .run()
