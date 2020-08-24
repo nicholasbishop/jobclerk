@@ -10,6 +10,9 @@ use strum_macros::EnumString;
 use tokio_postgres::NoTls;
 
 type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
+type JobId = i64;
+type JobToken = String;
+type ProjectId = i64;
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -41,9 +44,6 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
     };
     HttpResponse::Ok().body(template.render()?)
 }
-
-type JobId = i64;
-type ProjectId = i64;
 
 #[derive(Debug, Serialize, EnumString)]
 #[serde(rename_all = "snake_case")]
@@ -138,11 +138,35 @@ async fn api_add_job(
     HttpResponse::Ok().json(AddJobResponse { job_id })
 }
 
+#[derive(Debug, Serialize)]
+struct RequestJobResponse {
+    job_id: Option<JobId>,
+    job_token: Option<JobToken>,
+}
+
 #[throws]
 async fn api_request_job(
     pool: web::Data<Pool>,
     path: web::Path<(String,)>,
 ) -> impl Responder {
+    let project_name = &path.0;
+
+    let conn = pool.get().await?;
+    let rows = conn.query("TODO", &[]).await?;
+
+    if rows.is_empty() {
+        HttpResponse::Ok().json(RequestJobResponse {
+            job_id: None,
+            job_token: None,
+        })
+    } else {
+        let row = &rows[0];
+        HttpResponse::Ok().json(RequestJobResponse {
+            job_id: Some(row.get(0)),
+            job_token: Some(row.get(1)),
+        })
+    }
+
     // Sketch of the protocol:
     //
     // client calls /projects/blah/request-job
