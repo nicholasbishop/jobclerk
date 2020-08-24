@@ -280,7 +280,6 @@ async fn main() {
 
     let pool = Pool::builder().build(db_manager).await?;
 
-    info!("starting server on port 8000");
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
