@@ -22,10 +22,17 @@ def main():
             'hello': 'world',
         })
     elif args.cmd == take_job:
-        resp = requests.post(base_url + '/api/projects/testproj/take-job')
+        resp = requests.post(base_url + '/api/projects/testproj/take-job', json={
+            'runner': 'testrunner'
+        })
 
-    pprint.pprint(resp.json())
-    resp.raise_for_status()
+    # TODO: return API errors as JSON too so that this isn't needed
+    try:
+        resp.raise_for_status()
+        pprint.pprint(resp.json())
+    except:
+        print(resp.text)
+        raise
 
 
 if __name__ == '__main__':

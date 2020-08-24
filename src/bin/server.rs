@@ -5,7 +5,9 @@ use chrono::{DateTime, Utc};
 use env_logger::Env;
 use fehler::throws;
 use log::info;
-use serde::Serialize;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 use tokio_postgres::NoTls;
 
@@ -13,6 +15,13 @@ type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
 type JobId = i64;
 type JobToken = String;
 type ProjectId = i64;
+
+fn make_random_string(length: usize) -> String {
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .collect()
+}
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -138,6 +147,11 @@ async fn api_add_job(
     HttpResponse::Ok().json(AddJobResponse { job_id })
 }
 
+#[derive(Debug, Deserialize)]
+struct TakeJobRequest {
+    runner: String,
+}
+
 #[derive(Debug, Serialize)]
 struct TakeJobResponse {
     job_id: Option<JobId>,
@@ -148,11 +162,20 @@ struct TakeJobResponse {
 async fn api_take_job(
     pool: web::Data<Pool>,
     path: web::Path<(String,)>,
+    data: web::Json<TakeJobRequest>,
 ) -> impl Responder {
     let project_name = &path.0;
 
+    let token = make_random_string(16);
+
     let conn = pool.get().await?;
-    let rows = conn.query("TODO", &[]).await?;
+    // TODO: do we need to explictly start a transaction here?
+    let rows = conn
+        .query(
+            include_str!("../../db/query_take_job.sql"),
+            &[project_name, &data.runner, &token],
+        )
+        .await?;
 
     if rows.is_empty() {
         HttpResponse::Ok().json(TakeJobResponse {
