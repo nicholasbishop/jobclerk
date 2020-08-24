@@ -8,7 +8,7 @@ use log::info;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
+use strum_macros::{AsRefStr, EnumString};
 use tokio_postgres::NoTls;
 
 type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
@@ -54,12 +54,11 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
     HttpResponse::Ok().body(template.render()?)
 }
 
-#[derive(Debug, Serialize, EnumString)]
+#[derive(Debug, Deserialize, Serialize, AsRefStr, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum JobState {
     Available,
-    Activating,
     Running,
     Canceling,
     Canceled,
@@ -198,6 +197,77 @@ async fn api_take_job(
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct PatchJobRequest {
+    token: String,
+    state: Option<JobState>,
+    data: Option<serde_json::Value>,
+}
+
+#[throws]
+async fn api_patch_job(
+    pool: web::Data<Pool>,
+    path: web::Path<(String, JobId)>,
+    data: web::Json<PatchJobRequest>,
+) -> impl Responder {
+    let project_name = &path.0;
+    let job_id = &path.1;
+
+    let conn = pool.get().await?;
+
+    let mut stmt = "UPDATE jobs\n".to_string();
+    match data.state {
+        None => {
+            stmt += "SET heartbeat = CURRENT_TIMESTAMP,
+                         data = COALESCE($4, data)";
+        }
+        Some(JobState::Available) => {
+            stmt += "SET state = 'available',
+                         started = null,
+                         token = null,
+                         data = COALESCE($4, data)";
+        }
+        Some(JobState::Canceled)
+        | Some(JobState::Succeeded)
+        | Some(JobState::Failed) => {
+            stmt += "SET state = $5,
+                         finished = CURRENT_TIMESTAMP,
+                         token = null,
+                         data = COALESCE($4, data)";
+        }
+        Some(_) => {
+            // TODO
+            return HttpResponse::BadRequest();
+        }
+    }
+
+    stmt += "WHERE id = $2 AND project = (
+                 SELECT id FROM projects WHERE name = $1) AND
+               state = 'running' AND token = $3
+             RETURNING id";
+
+    let rows = conn
+        .query(
+            stmt.as_str(),
+            &[
+                project_name,
+                job_id,
+                &data.token,
+                &data.data,
+                &data.state.as_ref().unwrap().as_ref(),
+            ],
+        )
+        .await?;
+
+    if rows.is_empty() {
+        // TODO
+        HttpResponse::NotFound()
+    } else {
+        // TODO
+        HttpResponse::Ok()
+    }
+}
+
 #[throws(anyhow::Error)]
 #[actix_rt::main]
 async fn main() {
@@ -220,6 +290,10 @@ async fn main() {
             .route(
                 "/api/projects/{project}/take-job",
                 web::post().to(api_take_job),
+            )
+            .route(
+                "/api/projects/{project}/jobs/{job_id}",
+                web::patch().to(api_patch_job),
             )
     })
     .bind("127.0.0.1:8000")?
