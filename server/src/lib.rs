@@ -54,14 +54,14 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
     HttpResponse::Ok().body(template.render()?)
 }
 
-#[derive(Debug, Deserialize)]
-struct AddProjectRequest {
-    name: String,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AddProjectRequest {
+    pub name: String,
 }
 
-#[derive(Debug, Serialize)]
-struct AddProjectResponse {
-    project_id: ProjectId,
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct AddProjectResponse {
+    pub project_id: ProjectId,
 }
 
 #[throws]

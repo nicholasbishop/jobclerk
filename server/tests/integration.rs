@@ -2,8 +2,10 @@ use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
 use env_logger::Env;
 use fehler::{throw, throws};
-use jobclerk_server::{app_config, make_pool, DEFAULT_POSTGRES_PORT};
-use serde_json::json;
+use jobclerk_server::{
+    app_config, make_pool, AddProjectRequest, AddProjectResponse,
+    DEFAULT_POSTGRES_PORT,
+};
 use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
@@ -101,12 +103,13 @@ async fn integration_test() -> Result<(), Error> {
 
     let req = test::TestRequest::post()
         .uri("/api/projects")
-        .set_json(&json!({
-            "name": "testproj"
-        }))
+        .set_json(&AddProjectRequest {
+            name: "testproj".into(),
+        })
         .to_request();
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
+    let resp: AddProjectResponse =
+        test::read_response_json(&mut app, req).await;
+    assert_eq!(resp, AddProjectResponse { project_id: 1 });
 
     Ok(())
 }
