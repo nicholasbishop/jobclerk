@@ -4,7 +4,6 @@ use bb8_postgres::PostgresConnectionManager;
 use chrono::{DateTime, Utc};
 use env_logger::Env;
 use fehler::throws;
-use log::info;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};

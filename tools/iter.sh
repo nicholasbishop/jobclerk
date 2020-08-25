@@ -6,4 +6,4 @@ cargo fmt
 cargo test
 cargo clippy
 cargo build
-target/debug/server
+target/debug/jobclerk-server
