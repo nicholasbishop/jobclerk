@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Error};
 use fehler::{throw, throws};
 use std::process::{Child, Command};
+use ureq::json;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
 
@@ -56,7 +57,9 @@ impl ProcDrop {
 
 impl Drop for ProcDrop {
     fn drop(&mut self) {
-        self.child.kill();
+        if let Err(err) = self.child.kill() {
+            eprintln!("ProcDrop failed: {}", err);
+        }
     }
 }
 
@@ -99,6 +102,13 @@ fn integration_test() {
     // Run the server
     let _server =
         ProcDrop::new(Command::new("../target/debug/jobclerk-server").spawn()?);
+
+    let url = "http://localhost:8000";
+    assert!(ureq::post(&format!("{}/projects", url))
+        .send_json(json!({
+            "name": "testproj"
+        }))
+        .ok());
 
     // TODO: make requests and test the result
 }

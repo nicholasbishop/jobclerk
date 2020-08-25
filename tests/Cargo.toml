@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 fehler = "1.0"
+ureq = { version = "1.4", features = ["json"] }
