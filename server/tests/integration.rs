@@ -80,12 +80,17 @@ fn run_postgres() {
 async fn integration_test() -> Result<(), Error> {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
-    // Run the database
+    // Run and initialize the database
     run_postgres()?;
     let _stop_postgres = RunOnDrop::new(get_postgres_cmd("kill"));
+    let pool = make_pool(POSTGRES_PORT).await?;
+    {
+        let conn = pool.get().await?;
+        conn.batch_execute(include_str!("../../db/init.sql"))
+            .await?;
+    }
 
     // Run the server
-    let pool = make_pool(POSTGRES_PORT).await?;
     let mut app = test::init_service(
         App::new()
             .wrap(middleware::Logger::default())
