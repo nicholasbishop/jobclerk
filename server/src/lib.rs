@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use askama::Template;
 use bb8_postgres::PostgresConnectionManager;
 use chrono::{DateTime, Utc};
@@ -22,7 +22,7 @@ fn make_random_string(length: usize) -> String {
 }
 
 #[derive(Debug, thiserror::Error)]
-enum Error {
+pub enum Error {
     #[error("db error: {0}")]
     Db(#[from] tokio_postgres::Error),
     #[error("pool error: {0}")]
@@ -266,18 +266,9 @@ async fn api_patch_job(
     }
 }
 
-#[throws(anyhow::Error)]
-pub async fn run_server() {
-    let db_manager = PostgresConnectionManager::new_from_stringlike(
-        "host=localhost user=postgres",
-        NoTls,
-    )?;
-
-    let pool = Pool::builder().build(db_manager).await?;
-
-    HttpServer::new(move || {
-        App::new()
-            .data(pool.clone())
+pub fn app_config(config: &mut web::ServiceConfig) {
+    config.service(
+        web::scope("")
             .route("/projects", web::get().to(list_projects))
             .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
             .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
@@ -288,9 +279,16 @@ pub async fn run_server() {
             .route(
                 "/api/projects/{project}/jobs/{job_id}",
                 web::patch().to(api_patch_job),
-            )
-    })
-    .bind("127.0.0.1:8000")?
-    .run()
-    .await?
+            ),
+    );
+}
+
+#[throws(anyhow::Error)]
+pub async fn make_pool() -> Pool {
+    let db_manager = PostgresConnectionManager::new_from_stringlike(
+        "host=localhost user=postgres",
+        NoTls,
+    )?;
+
+    Pool::builder().build(db_manager).await?
 }

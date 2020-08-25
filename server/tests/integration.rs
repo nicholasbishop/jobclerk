@@ -1,7 +1,9 @@
+use actix_web::{test, App};
 use anyhow::{anyhow, Error};
 use fehler::{throw, throws};
-use std::process::{Child, Command};
-use ureq::json;
+use jobclerk_server::{app_config, make_pool};
+use serde_json::json;
+use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
 
@@ -45,24 +47,6 @@ impl Drop for RunOnDrop {
     }
 }
 
-struct ProcDrop {
-    child: Child,
-}
-
-impl ProcDrop {
-    fn new(child: Child) -> ProcDrop {
-        ProcDrop { child }
-    }
-}
-
-impl Drop for ProcDrop {
-    fn drop(&mut self) {
-        if let Err(err) = self.child.kill() {
-            eprintln!("ProcDrop failed: {}", err);
-        }
-    }
-}
-
 fn get_postgres_cmd(action: &str) -> Command {
     let mut cmd = Command::new("docker");
     cmd.args(&[action, POSTGRES_CONTAINER_NAME]);
@@ -92,23 +76,25 @@ fn run_postgres() {
     ]))?;
 }
 
-#[throws]
-#[test]
-fn integration_test() {
+#[actix_rt::test]
+async fn integration_test() -> Result<(), Error> {
     // Run the database
     run_postgres()?;
     let _stop_postgres = RunOnDrop::new(get_postgres_cmd("kill"));
 
     // Run the server
-    let _server =
-        ProcDrop::new(Command::new("../target/debug/jobclerk-server").spawn()?);
+    let pool = make_pool().await?;
+    let mut app =
+        test::init_service(App::new().configure(app_config).data(pool)).await;
 
-    let url = "http://localhost:8000";
-    assert!(ureq::post(&format!("{}/projects", url))
-        .send_json(json!({
+    let req = test::TestRequest::post()
+        .uri("/api/projects")
+        .set_json(&json!({
             "name": "testproj"
         }))
-        .ok());
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
 
-    // TODO: make requests and test the result
+    Ok(())
 }
