@@ -1,5 +1,6 @@
-use actix_web::{test, App};
+use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
+use env_logger::Env;
 use fehler::{throw, throws};
 use jobclerk_server::{app_config, make_pool};
 use serde_json::json;
@@ -78,14 +79,21 @@ fn run_postgres() {
 
 #[actix_rt::test]
 async fn integration_test() -> Result<(), Error> {
+    env_logger::from_env(Env::default().default_filter_or("info")).init();
+
     // Run the database
     run_postgres()?;
     let _stop_postgres = RunOnDrop::new(get_postgres_cmd("kill"));
 
     // Run the server
     let pool = make_pool().await?;
-    let mut app =
-        test::init_service(App::new().configure(app_config).data(pool)).await;
+    let mut app = test::init_service(
+        App::new()
+            .wrap(middleware::Logger::default())
+            .configure(app_config)
+            .data(pool),
+    )
+    .await;
 
     let req = test::TestRequest::post()
         .uri("/api/projects")

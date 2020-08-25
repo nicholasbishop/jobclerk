@@ -1,4 +1,4 @@
-use actix_web::{App, HttpServer};
+use actix_web::{middleware, App, HttpServer};
 use env_logger::Env;
 use fehler::throws;
 use jobclerk_server::{app_config, make_pool};
@@ -11,7 +11,10 @@ async fn main() {
     let pool = make_pool().await?;
 
     HttpServer::new(move || {
-        App::new().configure(app_config).data(pool.clone())
+        App::new()
+            .wrap(middleware::Logger::default())
+            .configure(app_config)
+            .data(pool.clone())
     })
     .bind("127.0.0.1:8000")?
     .run()
