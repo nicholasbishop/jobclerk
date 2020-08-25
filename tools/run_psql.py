@@ -8,7 +8,7 @@ def run_cmd(*cmd):
     subprocess.run(cmd, check=True)
 
 def main():
-    name = 'jobline-postgres'
+    name = 'jobclerk-postgres'
 
     run_cmd('docker', 'run',
             '--rm',

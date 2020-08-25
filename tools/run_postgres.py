@@ -9,7 +9,7 @@ def run_cmd(*cmd):
 
 
 def main():
-    name = 'jobline-postgres'
+    name = 'jobclerk-postgres'
 
     run_cmd('docker', 'run', '--rm', '--name', name,
             '--publish', '5432:5432',
