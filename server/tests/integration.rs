@@ -2,11 +2,12 @@ use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
 use env_logger::Env;
 use fehler::{throw, throws};
-use jobclerk_server::{app_config, make_pool};
+use jobclerk_server::{app_config, make_pool, DEFAULT_POSTGRES_PORT};
 use serde_json::json;
 use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
+const POSTGRES_PORT: u16 = 5433;
 
 fn cmd_str(cmd: &Command) -> String {
     format!("{:?}", cmd).replace('"', "")
@@ -56,8 +57,6 @@ fn get_postgres_cmd(action: &str) -> Command {
 
 #[throws]
 fn run_postgres() {
-    let pg_port = 5433;
-
     // Stop the container if it already exists
     run_cmd_no_check(&mut get_postgres_cmd("stop"))?;
 
@@ -67,7 +66,7 @@ fn run_postgres() {
         "--name",
         POSTGRES_CONTAINER_NAME,
         "--publish",
-        &format!("{0}:{0}", pg_port),
+        &format!("{}:{}", POSTGRES_PORT, DEFAULT_POSTGRES_PORT),
         // Allow all connections without a password. This is just a
         // test database so it's fine.
         "-e",
@@ -86,7 +85,7 @@ async fn integration_test() -> Result<(), Error> {
     let _stop_postgres = RunOnDrop::new(get_postgres_cmd("kill"));
 
     // Run the server
-    let pool = make_pool().await?;
+    let pool = make_pool(POSTGRES_PORT).await?;
     let mut app = test::init_service(
         App::new()
             .wrap(middleware::Logger::default())

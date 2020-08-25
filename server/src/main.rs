@@ -1,14 +1,14 @@
 use actix_web::{middleware, App, HttpServer};
 use env_logger::Env;
 use fehler::throws;
-use jobclerk_server::{app_config, make_pool};
+use jobclerk_server::{app_config, make_pool, DEFAULT_POSTGRES_PORT};
 
 #[throws(anyhow::Error)]
 #[actix_rt::main]
 async fn main() {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
-    let pool = make_pool().await?;
+    let pool = make_pool(DEFAULT_POSTGRES_PORT).await?;
 
     HttpServer::new(move || {
         App::new()

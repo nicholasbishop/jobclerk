@@ -14,6 +14,8 @@ type JobId = i64;
 type JobToken = String;
 type ProjectId = i64;
 
+pub const DEFAULT_POSTGRES_PORT: u16 = 5432;
+
 fn make_random_string(length: usize) -> String {
     thread_rng()
         .sample_iter(&Alphanumeric)
@@ -315,9 +317,9 @@ pub fn app_config(config: &mut web::ServiceConfig) {
 }
 
 #[throws(anyhow::Error)]
-pub async fn make_pool() -> Pool {
+pub async fn make_pool(port: u16) -> Pool {
     let db_manager = PostgresConnectionManager::new_from_stringlike(
-        "host=localhost user=postgres",
+        format!("host=localhost user=postgres port={}", port),
         NoTls,
     )?;
 
