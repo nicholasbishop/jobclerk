@@ -52,6 +52,36 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
     HttpResponse::Ok().body(template.render()?)
 }
 
+#[derive(Debug, Deserialize)]
+struct AddProjectRequest {
+    name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AddProjectResponse {
+    project_id: ProjectId,
+}
+
+#[throws]
+async fn api_add_project(
+    pool: web::Data<Pool>,
+    data: web::Json<AddProjectRequest>,
+) -> impl Responder {
+    let conn = pool.get().await?;
+    let row = conn
+        .query_one(
+            "INSERT INTO projects (name)
+             VALUES ($1)
+             RETURNING id",
+            &[&data.name],
+        )
+        .await?;
+
+    HttpResponse::Ok().json(AddProjectResponse {
+        project_id: row.get(0),
+    })
+}
+
 #[derive(Debug, Deserialize, Serialize, AsRefStr, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -270,6 +300,7 @@ pub fn app_config(config: &mut web::ServiceConfig) {
     config.service(
         web::scope("")
             .route("/projects", web::get().to(list_projects))
+            .route("/api/projects", web::post().to(api_add_project))
             .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
             .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
             .route(
