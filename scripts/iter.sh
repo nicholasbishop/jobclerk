@@ -3,7 +3,8 @@
 set -eux
 
 cargo fmt
+# Build before test so that the integration test works
+cargo build
 cargo test
 cargo clippy
-cargo build
 target/debug/jobclerk-server
