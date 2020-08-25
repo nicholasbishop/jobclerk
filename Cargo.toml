@@ -2,6 +2,7 @@
 
 members = [
     "server",
+    "tools",
 ]
 
 
@@ -13,6 +14,5 @@ members = [
 
 # [dependencies]
 # anyhow = "1.0"
-# argh = "0.1"
 # fehler = "1.0"
 # log = "0.4"

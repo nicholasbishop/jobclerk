@@ -65,17 +65,17 @@ async fn main() {
     match opt.command {
         Command::Init => {
             client
-                .batch_execute(include_str!("../../db/init.sql"))
+                .batch_execute(include_str!("../../../db/init.sql"))
                 .await?;
         }
         Command::Clean => {
             client
-                .batch_execute(include_str!("../../db/clean.sql"))
+                .batch_execute(include_str!("../../../db/clean.sql"))
                 .await?;
         }
         Command::Test => {
             client
-                .batch_execute(include_str!("../../db/test.sql"))
+                .batch_execute(include_str!("../../../db/test.sql"))
                 .await?;
         }
     }
