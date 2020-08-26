@@ -1,5 +1,6 @@
 use actix_http::Request;
 use actix_web::dev::{MessageBody, Service, ServiceResponse};
+use actix_web::http::StatusCode;
 use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
 use chrono::{Duration, Utc};
@@ -7,8 +8,8 @@ use env_logger::Env;
 use fehler::{throw, throws};
 use jobclerk_server::{
     app_config, make_pool, AddJobResponse, AddProjectRequest,
-    AddProjectResponse, Job, JobState, TakeJobRequest, TakeJobResponse,
-    DEFAULT_POSTGRES_PORT,
+    AddProjectResponse, Job, JobState, PatchJobRequest, TakeJobRequest,
+    TakeJobResponse, DEFAULT_POSTGRES_PORT,
 };
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -191,7 +192,8 @@ async fn integration_test() -> Result<(), Error> {
         .to_request();
     let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
     assert_eq!(resp.job_id, Some(1));
-    assert_eq!(resp.job_token.unwrap().len(), 16);
+    let token = resp.job_token.clone().unwrap();
+    assert_eq!(token.len(), 16);
 
     // Verify the job can't be taken again
     check_json_post(
@@ -206,6 +208,18 @@ async fn integration_test() -> Result<(), Error> {
         },
     )
     .await;
+
+    // Send a heartbeat update
+    let req = test::TestRequest::patch()
+        .uri("/api/projects/testproj/jobs/1")
+        .set_json(&PatchJobRequest {
+            token,
+            state: None,
+            data: None,
+        })
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     Ok(())
 }

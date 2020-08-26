@@ -7,6 +7,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use strum_macros::{AsRefStr, EnumString};
+use tokio_postgres::types::ToSql;
 use tokio_postgres::NoTls;
 
 type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
@@ -227,11 +228,11 @@ async fn api_take_job(
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct PatchJobRequest {
-    token: String,
-    state: Option<JobState>,
-    data: Option<serde_json::Value>,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PatchJobRequest {
+    pub token: String,
+    pub state: Option<JobState>,
+    pub data: Option<serde_json::Value>,
 }
 
 #[throws]
@@ -246,6 +247,9 @@ async fn api_patch_job(
     let conn = pool.get().await?;
 
     let mut stmt = "UPDATE jobs\n".to_string();
+    let mut inputs: Vec<&(dyn ToSql + Sync)> =
+        vec![project_name, job_id, &data.token, &data.data];
+    let job_state_str;
 
     // Coalesce is used when setting the data so that if the data in
     // the request is null, the existing value in the row is kept.
@@ -275,6 +279,8 @@ async fn api_patch_job(
                          finished = CURRENT_TIMESTAMP,
                          token = null,
                          data = COALESCE($4, data)";
+            job_state_str = data.state.as_ref().unwrap().as_ref();
+            inputs.push(&job_state_str);
         }
         Some(_) => {
             // TODO
@@ -287,18 +293,7 @@ async fn api_patch_job(
                state = 'running' AND token = $3
              RETURNING id";
 
-    let rows = conn
-        .query(
-            stmt.as_str(),
-            &[
-                project_name,
-                job_id,
-                &data.token,
-                &data.data,
-                &data.state.as_ref().unwrap().as_ref(),
-            ],
-        )
-        .await?;
+    let rows = conn.query(stmt.as_str(), &inputs).await?;
 
     if rows.is_empty() {
         // TODO
