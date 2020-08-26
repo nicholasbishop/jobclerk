@@ -176,15 +176,15 @@ async fn api_add_job(
     HttpResponse::Ok().json(AddJobResponse { job_id })
 }
 
-#[derive(Debug, Deserialize)]
-struct TakeJobRequest {
-    runner: String,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TakeJobRequest {
+    pub runner: String,
 }
 
-#[derive(Debug, Serialize)]
-struct TakeJobResponse {
-    job_id: Option<JobId>,
-    job_token: Option<JobToken>,
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct TakeJobResponse {
+    pub job_id: Option<JobId>,
+    pub job_token: Option<JobToken>,
 }
 
 /// Take ownership of an available job.
@@ -246,12 +246,20 @@ async fn api_patch_job(
     let conn = pool.get().await?;
 
     let mut stmt = "UPDATE jobs\n".to_string();
+
+    // Coalesce is used when setting the data so that if the data in
+    // the request is null, the existing value in the row is kept.
     match data.state {
         None => {
+            // No state is set, so just update the heartbeat time
             stmt += "SET heartbeat = CURRENT_TIMESTAMP,
                          data = COALESCE($4, data)";
         }
         Some(JobState::Available) => {
+            // The runner has given up on the job for some reason and
+            // is transitioning it from running back to
+            // available. Clear the token so that more updates can't
+            // be sent. Clear the started time as well.
             stmt += "SET state = 'available',
                          started = null,
                          token = null,
@@ -260,6 +268,9 @@ async fn api_patch_job(
         Some(JobState::Canceled)
         | Some(JobState::Succeeded)
         | Some(JobState::Failed) => {
+            // The runner is marking the job as finished. Update the
+            // finished time and clear the token so that more updates
+            // can't be sent.
             stmt += "SET state = $5,
                          finished = CURRENT_TIMESTAMP,
                          token = null,
@@ -294,7 +305,7 @@ async fn api_patch_job(
         HttpResponse::NotFound()
     } else {
         // TODO
-        HttpResponse::Ok()
+        HttpResponse::NoContent()
     }
 }
 

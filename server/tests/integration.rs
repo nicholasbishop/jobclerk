@@ -7,7 +7,8 @@ use env_logger::Env;
 use fehler::{throw, throws};
 use jobclerk_server::{
     app_config, make_pool, AddJobResponse, AddProjectRequest,
-    AddProjectResponse, Job, JobState, DEFAULT_POSTGRES_PORT,
+    AddProjectResponse, Job, JobState, TakeJobRequest, TakeJobResponse,
+    DEFAULT_POSTGRES_PORT,
 };
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -180,6 +181,31 @@ async fn integration_test() -> Result<(), Error> {
             })
         }
     );
+
+    // Take a job
+    let req = test::TestRequest::post()
+        .uri("/api/projects/testproj/take-job")
+        .set_json(&TakeJobRequest {
+            runner: "testrunner".into(),
+        })
+        .to_request();
+    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.job_id, Some(1));
+    assert_eq!(resp.job_token.unwrap().len(), 16);
+
+    // Verify the job can't be taken again
+    check_json_post(
+        &mut app,
+        "/api/projects/testproj/take-job",
+        TakeJobRequest {
+            runner: "testrunner".into(),
+        },
+        TakeJobResponse {
+            job_id: None,
+            job_token: None,
+        },
+    )
+    .await;
 
     Ok(())
 }
