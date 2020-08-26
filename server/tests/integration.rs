@@ -214,8 +214,46 @@ async fn integration_test() -> Result<(), Error> {
     let req = test::TestRequest::patch()
         .uri("/api/projects/testproj/jobs/1")
         .set_json(&PatchJobRequest {
-            token,
+            token: token.clone(),
             state: None,
+            data: None,
+        })
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Verify that the job's JSON data was not changed
+    let req = test::TestRequest::get()
+        .uri("/api/projects/testproj/jobs/1")
+        .to_request();
+    let resp: Job = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.data, json!({"hello": "world"}));
+
+    // Update the job data
+    let req = test::TestRequest::patch()
+        .uri("/api/projects/testproj/jobs/1")
+        .set_json(&PatchJobRequest {
+            token: token.clone(),
+            state: None,
+            data: Some(json!({"hello": "test"})),
+        })
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Verify that the job's JSON data was changed
+    let req = test::TestRequest::get()
+        .uri("/api/projects/testproj/jobs/1")
+        .to_request();
+    let resp: Job = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.data, json!({"hello": "test"}));
+
+    // Mark the job as finished
+    let req = test::TestRequest::patch()
+        .uri("/api/projects/testproj/jobs/1")
+        .set_json(&PatchJobRequest {
+            token,
+            state: Some(JobState::Succeeded),
             data: None,
         })
         .to_request();

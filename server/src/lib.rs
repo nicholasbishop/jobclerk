@@ -149,6 +149,44 @@ async fn api_get_jobs(
     HttpResponse::Ok().json(jobs)
 }
 
+#[throws]
+async fn api_get_job(
+    pool: web::Data<Pool>,
+    path: web::Path<(String, JobId)>,
+) -> impl Responder {
+    let project_name = &path.0;
+    let job_id = &path.1;
+
+    let conn = pool.get().await?;
+    let rows = conn
+        .query(
+            "SELECT id, project, state, created, started, finished, priority, data
+             FROM jobs
+             WHERE project = (SELECT id FROM projects WHERE name = $1)
+               AND id = $2",
+            &[project_name, job_id],
+        )
+        .await?;
+
+    if rows.is_empty() {
+        HttpResponse::NotFound().finish()
+    } else {
+        let row = &rows[0];
+        let state: String = row.get(2);
+        HttpResponse::Ok().json(Job {
+            id: row.get(0),
+            project_name: project_name.clone(),
+            project_id: row.get(1),
+            state: state.parse()?,
+            created: row.get(3),
+            started: row.get(4),
+            finished: row.get(5),
+            priority: row.get(6),
+            data: row.get(7),
+        })
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct AddJobResponse {
     pub job_id: JobId,
@@ -311,6 +349,10 @@ pub fn app_config(config: &mut web::ServiceConfig) {
             .route("/projects", web::get().to(list_projects))
             .route("/api/projects", web::post().to(api_add_project))
             .route("/api/projects/{project}/jobs", web::get().to(api_get_jobs))
+            .route(
+                "/api/projects/{project}/jobs/{job}",
+                web::get().to(api_get_job),
+            )
             .route("/api/projects/{project}/jobs", web::post().to(api_add_job))
             .route(
                 "/api/projects/{project}/take-job",
