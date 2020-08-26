@@ -3,9 +3,10 @@ use anyhow::{anyhow, Error};
 use env_logger::Env;
 use fehler::{throw, throws};
 use jobclerk_server::{
-    app_config, make_pool, AddProjectRequest, AddProjectResponse,
-    DEFAULT_POSTGRES_PORT,
+    app_config, make_pool, AddJobResponse, AddProjectRequest,
+    AddProjectResponse, DEFAULT_POSTGRES_PORT,
 };
+use serde_json::json;
 use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
@@ -110,6 +111,15 @@ async fn integration_test() -> Result<(), Error> {
     let resp: AddProjectResponse =
         test::read_response_json(&mut app, req).await;
     assert_eq!(resp, AddProjectResponse { project_id: 1 });
+
+    let req = test::TestRequest::post()
+        .uri("/api/projects/testproj/jobs")
+        .set_json(&json!({
+            "hello": "world",
+        }))
+        .to_request();
+    let resp: AddJobResponse = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp, AddJobResponse { job_id: 1 });
 
     Ok(())
 }

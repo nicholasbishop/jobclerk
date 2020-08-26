@@ -147,9 +147,9 @@ async fn api_get_jobs(
     HttpResponse::Ok().json(jobs)
 }
 
-#[derive(Debug, Serialize)]
-struct AddJobResponse {
-    job_id: JobId,
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct AddJobResponse {
+    pub job_id: JobId,
 }
 
 #[throws]
