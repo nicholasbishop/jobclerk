@@ -1,12 +1,18 @@
+use actix_http::Request;
+use actix_web::dev::{MessageBody, Service, ServiceResponse};
 use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
+use chrono::{Duration, Utc};
 use env_logger::Env;
 use fehler::{throw, throws};
 use jobclerk_server::{
     app_config, make_pool, AddJobResponse, AddProjectRequest,
-    AddProjectResponse, DEFAULT_POSTGRES_PORT,
+    AddProjectResponse, Job, JobState, DEFAULT_POSTGRES_PORT,
 };
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::json;
+use std::fmt;
 use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
@@ -79,6 +85,29 @@ fn run_postgres() {
     ]))?;
 }
 
+async fn check_json_post<'a, B, App, S, D>(
+    app: &mut App,
+    url: &str,
+    body: S,
+    expected: D,
+) where
+    App: Service<
+        Request = Request,
+        Response = ServiceResponse<B>,
+        Error = actix_web::Error,
+    >,
+    B: MessageBody,
+    S: Serialize,
+    D: DeserializeOwned + fmt::Debug + Eq,
+{
+    let req = test::TestRequest::post()
+        .uri(url)
+        .set_json(&body)
+        .to_request();
+    let resp: D = test::read_response_json(app, req).await;
+    assert_eq!(resp, expected);
+}
+
 #[actix_rt::test]
 async fn integration_test() -> Result<(), Error> {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
@@ -102,24 +131,55 @@ async fn integration_test() -> Result<(), Error> {
     )
     .await;
 
-    let req = test::TestRequest::post()
-        .uri("/api/projects")
-        .set_json(&AddProjectRequest {
+    // Create a project
+    check_json_post(
+        &mut app,
+        "/api/projects",
+        AddProjectRequest {
             name: "testproj".into(),
-        })
-        .to_request();
-    let resp: AddProjectResponse =
-        test::read_response_json(&mut app, req).await;
-    assert_eq!(resp, AddProjectResponse { project_id: 1 });
+        },
+        AddProjectResponse { project_id: 1 },
+    )
+    .await;
 
-    let req = test::TestRequest::post()
-        .uri("/api/projects/testproj/jobs")
-        .set_json(&json!({
+    // Create a job
+    check_json_post(
+        &mut app,
+        "/api/projects/testproj/jobs",
+        json!({
             "hello": "world",
-        }))
+        }),
+        AddJobResponse { job_id: 1 },
+    )
+    .await;
+
+    // List jobs
+    let req = test::TestRequest::get()
+        .uri("/api/projects/testproj/jobs")
         .to_request();
-    let resp: AddJobResponse = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp, AddJobResponse { job_id: 1 });
+    let resp: Vec<Job> = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.len(), 1);
+    let job = &resp[0];
+    // Check the created time separately since there's wiggle room
+    assert!(
+        Utc::now().signed_duration_since(job.created) < Duration::seconds(1)
+    );
+    assert_eq!(
+        job,
+        &Job {
+            id: 1,
+            project_id: 1,
+            project_name: "testproj".into(),
+            state: JobState::Available,
+            created: job.created,
+            started: None,
+            finished: None,
+            priority: 0,
+            data: json!({
+                "hello": "world",
+            })
+        }
+    );
 
     Ok(())
 }

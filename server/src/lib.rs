@@ -84,10 +84,10 @@ async fn api_add_project(
     })
 }
 
-#[derive(Debug, Deserialize, Serialize, AsRefStr, EnumString)]
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize, AsRefStr, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-enum JobState {
+pub enum JobState {
     Available,
     Running,
     Canceling,
@@ -96,17 +96,17 @@ enum JobState {
     Failed,
 }
 
-#[derive(Debug, Serialize)]
-struct Job {
-    id: JobId,
-    project_name: String,
-    project_id: ProjectId,
-    state: JobState,
-    created: DateTime<Utc>,
-    started: Option<DateTime<Utc>>,
-    finished: Option<DateTime<Utc>>,
-    priority: i32,
-    data: serde_json::Value,
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct Job {
+    pub id: JobId,
+    pub project_name: String,
+    pub project_id: ProjectId,
+    pub state: JobState,
+    pub created: DateTime<Utc>,
+    pub started: Option<DateTime<Utc>>,
+    pub finished: Option<DateTime<Utc>>,
+    pub priority: i32,
+    pub data: serde_json::Value,
 }
 
 #[throws]
