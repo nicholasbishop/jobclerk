@@ -1,2 +1,2 @@
-INSERT INTO projects (name) VALUES ('testproj');
-INSERT INTO runners (name) VALUES ('testrunner');
+INSERT INTO projects (name, heartbeat_expiration_millis, data)
+VALUES ('testproj', 1000, '{}');

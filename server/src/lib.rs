@@ -58,6 +58,7 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AddProjectRequest {
     pub name: String,
+    pub heartbeat_expiration_millis: i32,
     pub data: serde_json::Value,
 }
 
@@ -71,13 +72,18 @@ async fn api_add_project(
     pool: web::Data<Pool>,
     data: web::Json<AddProjectRequest>,
 ) -> impl Responder {
+    if data.heartbeat_expiration_millis <= 0 {
+        // TODO
+        return HttpResponse::BadRequest().finish();
+    }
+
     let conn = pool.get().await?;
     let row = conn
         .query_one(
-            "INSERT INTO projects (name, data)
-             VALUES ($1, $2)
+            "INSERT INTO projects (name, heartbeat_expiration_millis, data)
+             VALUES ($1, $2, $3)
              RETURNING id",
-            &[&data.name, &data.data],
+            &[&data.name, &data.heartbeat_expiration_millis, &data.data],
         )
         .await?;
 
@@ -267,6 +273,16 @@ async fn api_take_job(
     }
 }
 
+#[throws]
+async fn api_handle_stuck_jobs(pool: web::Data<Pool>) -> impl Responder {
+    let conn = pool.get().await?;
+    let rows = conn
+        .query(include_str!("../../db/query_handle_stuck_jobs.sql"), &[])
+        .await?;
+    dbg!(rows);
+    HttpResponse::NoContent()
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PatchJobRequest {
     pub token: String,
@@ -361,6 +377,10 @@ pub fn app_config(config: &mut web::ServiceConfig) {
             .route(
                 "/api/projects/{project}/jobs/{job_id}",
                 web::patch().to(api_patch_job),
+            )
+            .route(
+                "/api/handle-stuck-jobs",
+                web::post().to(api_handle_stuck_jobs),
             ),
     );
 }

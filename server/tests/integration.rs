@@ -139,6 +139,7 @@ async fn integration_test() -> Result<(), Error> {
         "/api/projects",
         AddProjectRequest {
             name: "testproj".into(),
+            heartbeat_expiration_millis: 250, // 0.25 seconds
             data: json!({}),
         },
         AddProjectResponse { project_id: 1 },
@@ -259,6 +260,49 @@ async fn integration_test() -> Result<(), Error> {
         .to_request();
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Create a second job
+    check_json_post(
+        &mut app,
+        "/api/projects/testproj/jobs",
+        json!({}),
+        AddJobResponse { job_id: 2 },
+    )
+    .await;
+
+    // Take the job
+    let req = test::TestRequest::post()
+        .uri("/api/projects/testproj/take-job")
+        .set_json(&TakeJobRequest {
+            runner: "testrunner".into(),
+        })
+        .to_request();
+    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.job_id, Some(2));
+    let token = resp.job_token.clone().unwrap();
+
+    // Sleep for 0.5 seconds which should be well past the heartbeat
+    // expiration
+    tokio::time::delay_for(tokio::time::Duration::from_millis(500)).await;
+
+    // Poke the server to check for stuck jobs immediately (rather
+    // than waiting for the background thread to notice)
+    let req = test::TestRequest::post()
+        .uri("/api/handle-stuck-jobs")
+        .to_request();
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // Take the job again and verify the token has changed
+    let req = test::TestRequest::post()
+        .uri("/api/projects/testproj/take-job")
+        .set_json(&TakeJobRequest {
+            runner: "testrunner".into(),
+        })
+        .to_request();
+    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
+    assert_eq!(resp.job_id, Some(2));
+    assert_ne!(resp.job_token.unwrap(), token);
 
     Ok(())
 }

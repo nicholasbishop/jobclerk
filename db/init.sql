@@ -2,6 +2,10 @@ CREATE TABLE IF NOT EXISTS projects (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
 
+  -- Number of milliseconds after a heartbeat when the job will be
+  -- considered stuck and moved back to available with a new token.
+  heartbeat_expiration_millis INT NOT NULL,
+
   -- Arbitrary JSON configuration
   data JSONB NOT NULL
 );
@@ -26,6 +30,9 @@ CREATE TABLE IF NOT EXISTS jobs (
 
   -- Time that the last heartbeat was received from the job's runner
   heartbeat TIMESTAMPTZ,
+
+  -- TODO: might add an attempts field here so that if the job get
+  -- stuck X times it gets marked as failed
 
   -- When a job is taken (moved from available to running) the token
   -- is set to a random value. The runner that took the job must use

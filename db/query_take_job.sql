@@ -2,6 +2,7 @@ UPDATE jobs
 SET state = 'running',
     runner = $2,
     started = CURRENT_TIMESTAMP,
+    heartbeat = CURRENT_TIMESTAMP,
     token = $3
 WHERE id = (
   SELECT id
