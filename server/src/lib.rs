@@ -58,6 +58,7 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AddProjectRequest {
     pub name: String,
+    pub data: serde_json::Value,
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -73,10 +74,10 @@ async fn api_add_project(
     let conn = pool.get().await?;
     let row = conn
         .query_one(
-            "INSERT INTO projects (name)
-             VALUES ($1)
+            "INSERT INTO projects (name, data)
+             VALUES ($1, $2)
              RETURNING id",
-            &[&data.name],
+            &[&data.name, &data.data],
         )
         .await?;
 

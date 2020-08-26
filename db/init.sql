@@ -1,21 +1,15 @@
 CREATE TABLE IF NOT EXISTS projects (
   id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
-);
+  name TEXT NOT NULL UNIQUE,
 
-CREATE TABLE IF NOT EXISTS runners (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
-
-  -- TODO: will probably add more fields here, not sure yet how
-  -- generic to make this. For my use case these runners will probably
-  -- be separate EC2 instances.
+  -- Arbitrary JSON configuration
+  data JSONB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS jobs (
   id BIGSERIAL PRIMARY KEY,
   project BIGINT REFERENCES projects NOT NULL,
-  runner BIGINT REFERENCES runners,
+  runner TEXT,
 
   -- Valid states: available, running, canceling, canceled, succeeded,
   -- failed

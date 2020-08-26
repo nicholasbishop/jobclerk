@@ -139,6 +139,7 @@ async fn integration_test() -> Result<(), Error> {
         "/api/projects",
         AddProjectRequest {
             name: "testproj".into(),
+            data: json!({}),
         },
         AddProjectResponse { project_id: 1 },
     )

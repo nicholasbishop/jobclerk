@@ -1,7 +1,8 @@
 UPDATE jobs
-SET state = 'running', runner = (
-  SELECT id FROM runners WHERE name = $2
-), started = CURRENT_TIMESTAMP, token = $3
+SET state = 'running',
+    runner = $2,
+    started = CURRENT_TIMESTAMP,
+    token = $3
 WHERE id = (
   SELECT id
   FROM jobs
