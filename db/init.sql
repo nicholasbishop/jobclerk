@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   -- Time that the job was either canceled, or it succeeded or failed
   finished TIMESTAMPTZ,
 
-  -- Time that the last heartbeat was received from the job's owner
+  -- Time that the last heartbeat was received from the job's runner
   heartbeat TIMESTAMPTZ,
 
   -- When a job is taken (moved from available to running) the token
