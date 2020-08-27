@@ -1030,12 +1030,16 @@ version = "0.1.0"
 dependencies = [
  "bb8",
  "bb8-postgres",
+ "chrono",
+ "env_logger",
  "fehler",
  "jobclerk-types",
  "log",
  "rand",
+ "serde_json",
  "strum",
  "thiserror",
+ "tokio",
  "tokio-postgres",
 ]
 

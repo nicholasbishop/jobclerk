@@ -23,6 +23,18 @@ pub enum Error {
     Parse(#[from] strum::ParseError),
 }
 
+pub const DEFAULT_POSTGRES_PORT: u16 = 5432;
+
+#[throws]
+pub async fn make_pool(port: u16) -> Pool {
+    let db_manager = PostgresConnectionManager::new_from_stringlike(
+        format!("host=localhost user=postgres port={}", port),
+        NoTls,
+    )?;
+
+    Pool::builder().build(db_manager).await?
+}
+
 fn make_random_string(length: usize) -> String {
     thread_rng()
         .sample_iter(&Alphanumeric)
