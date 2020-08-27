@@ -1047,23 +1047,17 @@ dependencies = [
 name = "jobclerk-server"
 version = "0.1.0"
 dependencies = [
- "actix-http",
  "actix-rt",
  "actix-web",
  "anyhow",
  "askama",
  "bb8",
  "bb8-postgres",
- "chrono",
  "env_logger",
  "fehler",
  "jobclerk-api",
  "jobclerk-types",
- "log",
- "serde_json",
- "strum",
  "thiserror",
- "tokio",
  "tokio-postgres",
 ]
 

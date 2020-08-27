@@ -4,26 +4,17 @@ use askama::Template;
 use bb8_postgres::PostgresConnectionManager;
 use env_logger::Env;
 use fehler::throws;
-use jobclerk_api::{handle_request, Pool};
+use jobclerk_api::{handle_request, Pool, DEFAULT_POSTGRES_PORT};
 use tokio_postgres::NoTls;
 
-pub const DEFAULT_POSTGRES_PORT: u16 = 5432;
-
-// TODO: dedup this with api crate
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("bad request: {0}")]
-    BadRequest(String),
-    #[error("not found")]
-    NotFound,
     #[error("db error: {0}")]
     Db(#[from] tokio_postgres::Error),
     #[error("pool error: {0}")]
     Pool(#[from] bb8::RunError<tokio_postgres::Error>),
     #[error("template error: {0}")]
     Template(#[from] askama::Error),
-    #[error("parse error: {0}")]
-    Parse(#[from] strum::ParseError),
 }
 
 impl actix_web::error::ResponseError for Error {}
@@ -60,7 +51,7 @@ pub fn app_config(config: &mut web::ServiceConfig) {
     );
 }
 
-#[throws(anyhow::Error)]
+#[throws]
 async fn make_pool(port: u16) -> Pool {
     let db_manager = PostgresConnectionManager::new_from_stringlike(
         format!("host=localhost user=postgres port={}", port),
