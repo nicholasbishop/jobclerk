@@ -211,7 +211,7 @@ async fn integration_test() -> Result<(), Error> {
         job_id: 1,
     });
     check.expected_response = None;
-    let resp = check.call().await.to_get_job().unwrap();
+    let resp = check.call().await.into_get_job().unwrap();
     assert_eq!(resp.data, json!({"hello": "world"}));
 
     // Update the job data
@@ -231,22 +231,22 @@ async fn integration_test() -> Result<(), Error> {
         job_id: 1,
     });
     check.expected_response = None;
-    let resp = check.call().await.to_get_job().unwrap();
+    let resp = check.call().await.into_get_job().unwrap();
     assert_eq!(resp.data, json!({"hello": "test"}));
 
-    //     // Mark the job as finished
-    //     let req = test::TestRequest::patch()
-    //         .uri("/api/projects/testproj/jobs/1")
-    //         .set_json(&UpdateJobRequest {
-    //             project_name: "testproj".into(),
-    //             job_id: 1,
-    //             token,
-    //             state: Some(JobState::Succeeded),
-    //             data: None,
-    //         })
-    //         .to_request();
-    //     let resp = test::call_service(&mut app, req).await;
-    //     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    // Mark the job as finished
+    // let req = test::TestRequest::patch()
+    //     .uri("/api/projects/testproj/jobs/1")
+    //     .set_json(&UpdateJobRequest {
+    //         project_name: "testproj".into(),
+    //         job_id: 1,
+    //         token,
+    //         state: Some(JobState::Succeeded),
+    //         data: None,
+    //     })
+    //     .to_request();
+    // let resp = test::call_service(&mut app, req).await;
+    // assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     //     // Create a second job
     //     check_json_post(

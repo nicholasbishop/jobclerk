@@ -45,7 +45,7 @@ macro_rules! gen_conv {
                 }
             }
 
-            pub fn [<to_ $name>](self) -> Option<$ret> {
+            pub fn [<into_ $name>](self) -> Option<$ret> {
                 if let $resptype(resp) = self {
                     Some(resp)
                 } else {
