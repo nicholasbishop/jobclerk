@@ -145,12 +145,7 @@ async fn integration_test() -> Result<(), Error> {
         project_name: "testproj".into(),
     });
     check.expected_response = None;
-    let resp = check.call().await;
-    let jobs = if let Response::GetJobs(jobs) = resp {
-        jobs
-    } else {
-        panic!("invalid response type");
-    };
+    let jobs = check.call().await.into_get_jobs().unwrap();
     assert_eq!(jobs.len(), 1);
     let job = &jobs[0];
     // Check the created time separately since there's wiggle room
@@ -179,13 +174,7 @@ async fn integration_test() -> Result<(), Error> {
         project_name: "testproj".into(),
         runner: "testrunner".into(),
     });
-    let resp = check.call().await;
-    let job = if let Response::TakeJob(job) = resp {
-        job
-    } else {
-        panic!("invalid response type");
-    };
-    let job = job.unwrap();
+    let job = check.call().await.into_take_job().unwrap().unwrap();
     assert_eq!(job.job_id, 1);
     let token = job.job_token.clone();
     assert_eq!(token.len(), 16);
