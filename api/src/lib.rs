@@ -1,10 +1,27 @@
-use crate::{Error, Pool};
+use bb8_postgres::PostgresConnectionManager;
 use fehler::{throw, throws};
 use jobclerk_types::*;
 use log::{error, info};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use tokio_postgres::types::ToSql;
+use tokio_postgres::NoTls;
+
+pub type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("bad request: {0}")]
+    BadRequest(String),
+    #[error("not found")]
+    NotFound,
+    #[error("db error: {0}")]
+    Db(#[from] tokio_postgres::Error),
+    #[error("pool error: {0}")]
+    Pool(#[from] bb8::RunError<tokio_postgres::Error>),
+    #[error("parse error: {0}")]
+    Parse(#[from] strum::ParseError),
+}
 
 fn make_random_string(length: usize) -> String {
     thread_rng()
@@ -251,7 +268,6 @@ fn handle_request_err(err: Error) -> Response {
         Error::NotFound => Response::NotFound,
         Error::Db(_) => Response::InternalError,
         Error::Pool(_) => Response::InternalError,
-        Error::Template(_) => Response::InternalError,
         Error::Parse(_) => Response::InternalError,
     }
 }

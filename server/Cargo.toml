@@ -5,6 +5,7 @@ authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+jobclerk-api = { path = "../api" }
 jobclerk-types = { path = "../types" }
 
 actix-rt = "1.1"
@@ -16,7 +17,6 @@ bb8-postgres = "0.4.0"
 env_logger = "0.7"
 fehler = "1.0"
 log = "0.4"
-rand = "0.7"
 strum = "0.19"
 thiserror = "1.0"
 tokio = { version = "0.2", features = ["macros"] }

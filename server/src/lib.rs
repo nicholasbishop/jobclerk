@@ -1,15 +1,13 @@
-pub mod api;
-
 use actix_web::{web, HttpResponse, Responder};
 use askama::Template;
 use bb8_postgres::PostgresConnectionManager;
 use fehler::throws;
+use jobclerk_api::{handle_request, Pool};
 use tokio_postgres::NoTls;
-
-pub type Pool = bb8::Pool<PostgresConnectionManager<NoTls>>;
 
 pub const DEFAULT_POSTGRES_PORT: u16 = 5432;
 
+// TODO: dedup this with api crate
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("bad request: {0}")]
@@ -49,7 +47,7 @@ async fn handle_api_request(
     pool: web::Data<Pool>,
     req: web::Json<jobclerk_types::Request>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(api::handle_request(pool.get_ref(), &req).await)
+    HttpResponse::Ok().json(handle_request(pool.get_ref(), &req).await)
 }
 
 pub fn app_config(config: &mut web::ServiceConfig) {

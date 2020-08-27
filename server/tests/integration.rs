@@ -2,7 +2,7 @@ use anyhow::{anyhow, Error};
 use chrono::{Duration, Utc};
 use env_logger::Env;
 use fehler::{throw, throws};
-use jobclerk_server::{api, Pool};
+use jobclerk_api::{handle_request, Pool};
 use jobclerk_server::{make_pool, DEFAULT_POSTGRES_PORT};
 use jobclerk_types::*;
 use serde_json::json;
@@ -87,7 +87,7 @@ struct CheckRequest {
 
 impl CheckRequest {
     async fn call(&self) -> Response {
-        let resp = api::handle_request(&self.pool, &self.req).await;
+        let resp = handle_request(&self.pool, &self.req).await;
         if let Some(expected_response) = &self.expected_response {
             assert_eq!(&resp, expected_response);
         } else if self.check_error {
