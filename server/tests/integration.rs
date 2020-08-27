@@ -1,20 +1,11 @@
-use actix_http::Request;
-use actix_web::dev::{MessageBody, Service, ServiceResponse};
-use actix_web::http::StatusCode;
-use actix_web::{middleware, test, App};
 use anyhow::{anyhow, Error};
 use chrono::{Duration, Utc};
 use env_logger::Env;
 use fehler::{throw, throws};
-use jobclerk_server::{
-    app_config, make_pool, AddJobResponse, AddProjectRequest,
-    AddProjectResponse, Job, JobState, PatchJobRequest, TakeJobRequest,
-    TakeJobResponse, DEFAULT_POSTGRES_PORT,
-};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use jobclerk_server::types::*;
+use jobclerk_server::{api, Pool};
+use jobclerk_server::{make_pool, DEFAULT_POSTGRES_PORT};
 use serde_json::json;
-use std::fmt;
 use std::process::Command;
 
 const POSTGRES_CONTAINER_NAME: &str = "jobclerk-test-postgres";
@@ -87,29 +78,28 @@ fn run_postgres() {
     ]))?;
 }
 
-async fn check_json_post<'a, B, App, S, D>(
-    app: &mut App,
-    url: &str,
-    body: S,
-    expected: D,
-) where
-    App: Service<
-        Request = Request,
-        Response = ServiceResponse<B>,
-        Error = actix_web::Error,
-    >,
-    B: MessageBody,
-    S: Serialize,
-    D: DeserializeOwned + fmt::Debug + Eq,
-{
-    let req = test::TestRequest::post()
-        .uri(url)
-        .set_json(&body)
-        .to_request();
-    let resp: D = test::read_response_json(app, req).await;
-    assert_eq!(resp, expected);
+struct CheckRequest {
+    pool: Pool,
+    req: Request,
+    expected_response: Option<Response>,
+    check_error: bool,
 }
 
+impl CheckRequest {
+    async fn call(&self) -> Response {
+        let resp = api::handle_request(&self.pool, &self.req).await;
+        if let Some(expected_response) = &self.expected_response {
+            assert_eq!(&resp, expected_response);
+        } else if self.check_error {
+            if resp.is_error() {
+                panic!("call failed with: {:?}", resp);
+            }
+        }
+        resp
+    }
+}
+
+// TODO?
 #[actix_rt::test]
 async fn integration_test() -> Result<(), Error> {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
@@ -124,46 +114,45 @@ async fn integration_test() -> Result<(), Error> {
             .await?;
     }
 
-    // Run the server
-    let mut app = test::init_service(
-        App::new()
-            .wrap(middleware::Logger::default())
-            .configure(app_config)
-            .data(pool),
-    )
-    .await;
-
     // Create a project
-    check_json_post(
-        &mut app,
-        "/api/projects",
-        AddProjectRequest {
+    let mut check = CheckRequest {
+        pool,
+        req: Request::AddProject(AddProjectRequest {
             name: "testproj".into(),
             heartbeat_expiration_millis: 250, // 0.25 seconds
             data: json!({}),
-        },
-        AddProjectResponse { project_id: 1 },
-    )
-    .await;
+        }),
+        expected_response: Some(Response::AddProject(AddProjectResponse {
+            project_id: 1,
+        })),
+        check_error: true,
+    };
+    check.call().await;
 
     // Create a job
-    check_json_post(
-        &mut app,
-        "/api/projects/testproj/jobs",
-        json!({
+    check.req = Request::AddJob(AddJobRequest {
+        project_name: "testproj".into(),
+        data: json!({
             "hello": "world",
         }),
-        AddJobResponse { job_id: 1 },
-    )
-    .await;
+    });
+    check.expected_response =
+        Some(Response::AddJob(AddJobResponse { job_id: 1 }));
+    check.call().await;
 
     // List jobs
-    let req = test::TestRequest::get()
-        .uri("/api/projects/testproj/jobs")
-        .to_request();
-    let resp: Vec<Job> = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.len(), 1);
-    let job = &resp[0];
+    check.req = Request::GetJobs(GetJobsRequest {
+        project_name: "testproj".into(),
+    });
+    check.expected_response = None;
+    let resp = check.call().await;
+    let jobs = if let Response::GetJobs(jobs) = resp {
+        jobs
+    } else {
+        panic!("invalid response type");
+    };
+    assert_eq!(jobs.len(), 1);
+    let job = &jobs[0];
     // Check the created time separately since there's wiggle room
     assert!(
         Utc::now().signed_duration_since(job.created) < Duration::seconds(1)
@@ -186,123 +175,131 @@ async fn integration_test() -> Result<(), Error> {
     );
 
     // Take a job
-    let req = test::TestRequest::post()
-        .uri("/api/projects/testproj/take-job")
-        .set_json(&TakeJobRequest {
-            runner: "testrunner".into(),
-        })
-        .to_request();
-    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.job_id, Some(1));
-    let token = resp.job_token.clone().unwrap();
+    check.req = Request::TakeJob(TakeJobRequest {
+        project_name: "testproj".into(),
+        runner: "testrunner".into(),
+    });
+    let resp = check.call().await;
+    let job = if let Response::TakeJob(job) = resp {
+        job
+    } else {
+        panic!("invalid response type");
+    };
+    let job = job.unwrap();
+    assert_eq!(job.job_id, 1);
+    let token = job.job_token.clone();
     assert_eq!(token.len(), 16);
 
     // Verify the job can't be taken again
-    check_json_post(
-        &mut app,
-        "/api/projects/testproj/take-job",
-        TakeJobRequest {
-            runner: "testrunner".into(),
-        },
-        TakeJobResponse {
-            job_id: None,
-            job_token: None,
-        },
-    )
-    .await;
+    check.expected_response = Some(Response::TakeJob(None));
+    check.call().await;
 
     // Send a heartbeat update
-    let req = test::TestRequest::patch()
-        .uri("/api/projects/testproj/jobs/1")
-        .set_json(&PatchJobRequest {
-            token: token.clone(),
-            state: None,
-            data: None,
-        })
-        .to_request();
-    let resp = test::call_service(&mut app, req).await;
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    check.req = Request::UpdateJob(UpdateJobRequest {
+        project_name: "testproj".into(),
+        job_id: 1,
+        token: token.clone(),
+        state: None,
+        data: None,
+    });
+    check.expected_response = Some(Response::Empty);
+    check.call().await;
 
     // Verify that the job's JSON data was not changed
-    let req = test::TestRequest::get()
-        .uri("/api/projects/testproj/jobs/1")
-        .to_request();
-    let resp: Job = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.data, json!({"hello": "world"}));
+    check.req = Request::GetJob(GetJobRequest {
+        project_name: "testproj".into(),
+        job_id: 1,
+    });
+    check.expected_response = None;
+    let resp = check.call().await;
+    assert_eq!(resp, todo
 
     // Update the job data
-    let req = test::TestRequest::patch()
-        .uri("/api/projects/testproj/jobs/1")
-        .set_json(&PatchJobRequest {
-            token: token.clone(),
-            state: None,
-            data: Some(json!({"hello": "test"})),
-        })
-        .to_request();
-    let resp = test::call_service(&mut app, req).await;
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    check.req = Request::UpdateJob(UpdateJobRequest {
+        project_name: "testproj".into(),
+        job_id: 1,
+        token: token.clone(),
+        state: None,
+        data: Some(json!({"hello": "test"})),
+    });
+    check.expected_response = Some(Response::Empty);
+    check.call().await;
 
     // Verify that the job's JSON data was changed
-    let req = test::TestRequest::get()
-        .uri("/api/projects/testproj/jobs/1")
-        .to_request();
-    let resp: Job = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.data, json!({"hello": "test"}));
+    check.req = Request::GetJob(GetJobRequest {
+        project_name: "testproj".into(),
+        job_id: 1,
+    });
+    check.expected_response = None;
+    let resp = check.call().await;
 
-    // Mark the job as finished
-    let req = test::TestRequest::patch()
-        .uri("/api/projects/testproj/jobs/1")
-        .set_json(&PatchJobRequest {
-            token,
-            state: Some(JobState::Succeeded),
-            data: None,
-        })
-        .to_request();
-    let resp = test::call_service(&mut app, req).await;
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-    // Create a second job
-    check_json_post(
-        &mut app,
-        "/api/projects/testproj/jobs",
-        json!({}),
-        AddJobResponse { job_id: 2 },
-    )
-    .await;
+        let req = test::TestRequest::get()
+            .uri("/api/projects/testproj/jobs/1")
+            .to_request();
+        let resp: Job = test::read_response_json(&mut app, req).await;
+        assert_eq!(resp.data, json!({"hello": "test"}));
 
-    // Take the job
-    let req = test::TestRequest::post()
-        .uri("/api/projects/testproj/take-job")
-        .set_json(&TakeJobRequest {
-            runner: "testrunner".into(),
-        })
-        .to_request();
-    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.job_id, Some(2));
-    let token = resp.job_token.clone().unwrap();
+    //     // Mark the job as finished
+    //     let req = test::TestRequest::patch()
+    //         .uri("/api/projects/testproj/jobs/1")
+    //         .set_json(&UpdateJobRequest {
+    //             project_name: "testproj".into(),
+    //             job_id: 1,
+    //             token,
+    //             state: Some(JobState::Succeeded),
+    //             data: None,
+    //         })
+    //         .to_request();
+    //     let resp = test::call_service(&mut app, req).await;
+    //     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-    // Sleep for 0.5 seconds which should be well past the heartbeat
-    // expiration
-    tokio::time::delay_for(tokio::time::Duration::from_millis(500)).await;
+    //     // Create a second job
+    //     check_json_post(
+    //         &mut app,
+    //         "/api/projects/testproj/jobs",
+    //         json!({}),
+    //         AddJobResponse { job_id: 2 },
+    //     )
+    //     .await;
 
-    // Poke the server to check for stuck jobs immediately (rather
-    // than waiting for the background thread to notice)
-    let req = test::TestRequest::post()
-        .uri("/api/handle-stuck-jobs")
-        .to_request();
-    let resp = test::call_service(&mut app, req).await;
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    //     // Take the job
+    //     let req = test::TestRequest::post()
+    //         .uri("/api/projects/testproj/take-job")
+    //         .set_json(&TakeJobRequest {
+    //             project_name: "testproj".into(),
+    //             runner: "testrunner".into(),
+    //         })
+    //         .to_request();
+    //     let resp: Option<TakeJobResponse> =
+    //         test::read_response_json(&mut app, req).await;
+    //     let resp = resp.unwrap();
+    //     assert_eq!(resp.job_id, 2);
+    //     let token = resp.job_token.clone();
 
-    // Take the job again and verify the token has changed
-    let req = test::TestRequest::post()
-        .uri("/api/projects/testproj/take-job")
-        .set_json(&TakeJobRequest {
-            runner: "testrunner".into(),
-        })
-        .to_request();
-    let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
-    assert_eq!(resp.job_id, Some(2));
-    assert_ne!(resp.job_token.unwrap(), token);
+    //     // Sleep for 0.5 seconds which should be well past the heartbeat
+    //     // expiration
+    //     tokio::time::delay_for(tokio::time::Duration::from_millis(500)).await;
+
+    //     // Poke the server to check for stuck jobs immediately (rather
+    //     // than waiting for the background thread to notice)
+    //     let req = test::TestRequest::post()
+    //         .uri("/api/handle-stuck-jobs")
+    //         .to_request();
+    //     let resp = test::call_service(&mut app, req).await;
+    //     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    //     // Take the job again and verify the token has changed
+    //     let req = test::TestRequest::post()
+    //         .uri("/api/projects/testproj/take-job")
+    //         .set_json(&TakeJobRequest {
+    //             project_name: "testproj".into(),
+    //             runner: "testrunner".into(),
+    //         })
+    //         .to_request();
+    //     let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
+    //     assert_eq!(resp.job_id, 2);
+    //     assert_ne!(resp.job_token, token);
 
     Ok(())
 }

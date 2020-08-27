@@ -1038,6 +1038,7 @@ dependencies = [
  "chrono",
  "env_logger",
  "fehler",
+ "log",
  "rand",
  "serde",
  "serde_json",
