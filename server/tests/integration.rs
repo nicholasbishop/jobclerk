@@ -235,27 +235,24 @@ async fn integration_test() -> Result<(), Error> {
     assert_eq!(resp.data, json!({"hello": "test"}));
 
     // Mark the job as finished
-    // let req = test::TestRequest::patch()
-    //     .uri("/api/projects/testproj/jobs/1")
-    //     .set_json(&UpdateJobRequest {
-    //         project_name: "testproj".into(),
-    //         job_id: 1,
-    //         token,
-    //         state: Some(JobState::Succeeded),
-    //         data: None,
-    //     })
-    //     .to_request();
-    // let resp = test::call_service(&mut app, req).await;
-    // assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    check.req = Request::UpdateJob(UpdateJobRequest {
+        project_name: "testproj".into(),
+        job_id: 1,
+        token,
+        state: Some(JobState::Succeeded),
+        data: None,
+    });
+    check.expected_response = Some(Response::Empty);
+    check.call().await;
 
-    //     // Create a second job
-    //     check_json_post(
-    //         &mut app,
-    //         "/api/projects/testproj/jobs",
-    //         json!({}),
-    //         AddJobResponse { job_id: 2 },
-    //     )
-    //     .await;
+    // Create a second job
+    check.req = Request::AddJob(AddJobRequest {
+        project_name: "testproj".into(),
+        data: json!({}),
+    });
+    check.expected_response =
+        Some(Response::AddJob(AddJobResponse { job_id: 2 }));
+    check.call().await;
 
     //     // Take the job
     //     let req = test::TestRequest::post()
