@@ -1106,6 +1106,7 @@ dependencies = [
  "jobclerk-api",
  "jobclerk-types",
  "lambda",
+ "once_cell",
  "tokio",
 ]
 

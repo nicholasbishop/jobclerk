@@ -1,17 +1,34 @@
 use env_logger::Env;
-use jobclerk_api::{handle_request, make_pool, DEFAULT_POSTGRES_PORT};
+use jobclerk_api::{handle_request, make_pool, Pool, DEFAULT_POSTGRES_PORT};
 use jobclerk_types::{Request, Response};
-use lambda::{lambda, Context};
+use lambda::{handler_fn, Context};
+use once_cell::sync::OnceCell;
 use std::convert::Infallible;
 
-#[lambda]
+// Keep the pool in a OnceCell so that we know it's only initialized
+// once.
+static POOL: OnceCell<Pool> = OnceCell::new();
+
+async fn lambda_handler(
+    req: Request,
+    _: Context,
+) -> Result<Response, Infallible> {
+    let pool = POOL.get().expect("pool is not initialized");
+    Ok(handle_request(pool, &req).await)
+}
+
 #[tokio::main]
-async fn main(req: Request, _: Context) -> Result<Response, Infallible> {
+async fn main() {
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
     // TODO: need to add host and such to the params here
-    // TODO: does this need to be done outside main to share between requests?
-    let pool = make_pool(DEFAULT_POSTGRES_PORT).await.unwrap();
+    POOL.set(
+        make_pool(DEFAULT_POSTGRES_PORT)
+            .await
+            .expect("failed to initialize pool"),
+    )
+    .expect("pool is already initialized");
 
-    Ok(handle_request(&pool, &req).await)
+    let func = handler_fn(lambda_handler);
+    lambda::run(func).await.expect("failed to run lambda");
 }
