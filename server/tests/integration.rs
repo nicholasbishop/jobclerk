@@ -211,8 +211,8 @@ async fn integration_test() -> Result<(), Error> {
         job_id: 1,
     });
     check.expected_response = None;
-    let resp = check.call().await;
-    assert_eq!(resp, todo
+    let resp = check.call().await.to_get_job().unwrap();
+    assert_eq!(resp.data, json!({"hello": "world"}));
 
     // Update the job data
     check.req = Request::UpdateJob(UpdateJobRequest {
@@ -231,14 +231,8 @@ async fn integration_test() -> Result<(), Error> {
         job_id: 1,
     });
     check.expected_response = None;
-    let resp = check.call().await;
-
-
-        let req = test::TestRequest::get()
-            .uri("/api/projects/testproj/jobs/1")
-            .to_request();
-        let resp: Job = test::read_response_json(&mut app, req).await;
-        assert_eq!(resp.data, json!({"hello": "test"}));
+    let resp = check.call().await.to_get_job().unwrap();
+    assert_eq!(resp.data, json!({"hello": "test"}));
 
     //     // Mark the job as finished
     //     let req = test::TestRequest::patch()

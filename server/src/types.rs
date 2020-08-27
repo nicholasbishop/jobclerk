@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use paste::paste;
 use serde::{Deserialize, Serialize};
 use strum_macros::{AsRefStr, EnumString};
 
@@ -33,11 +34,39 @@ pub enum Response {
     InternalError,
 }
 
+macro_rules! gen_conv {
+    ($name:ident, $ret:ty, $resptype:path) => {
+        paste! {
+            pub fn [<as_ $name>](&self) -> Option<&$ret> {
+                if let $resptype(resp) = self {
+                    Some(resp)
+                } else {
+                    None
+                }
+            }
+
+            pub fn [<to_ $name>](self) -> Option<$ret> {
+                if let $resptype(resp) = self {
+                    Some(resp)
+                } else {
+                    None
+                }
+            }
+        }
+    };
+}
+
 impl Response {
     pub fn is_error(&self) -> bool {
         matches!(self, Response::BadRequest(_) | Response::NotFound |
                  Response::InternalError)
     }
+
+    gen_conv!(add_project, AddProjectResponse, Response::AddProject);
+    gen_conv!(add_job, AddJobResponse, Response::AddJob);
+    gen_conv!(get_job, Job, Response::GetJob);
+    gen_conv!(get_jobs, Vec<Job>, Response::GetJobs);
+    gen_conv!(take_job, Option<TakeJobResponse>, Response::TakeJob);
 }
 
 #[derive(Debug, Deserialize, Serialize)]
