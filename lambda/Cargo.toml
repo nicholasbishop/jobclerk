@@ -1,0 +1,13 @@
+[package]
+name = "jobclerk-lambda"
+version = "0.1.0"
+authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+jobclerk-api = { path = "../api" }
+jobclerk-types = { path = "../types" }
+
+env_logger = "0.7"
+lambda = { git = "https://github.com/awslabs/aws-lambda-rust-runtime/", rev = "a9de2fcb24030a00e402348aba3c368b717feb6d" }
+tokio = { version = "0.2", features = ["full"] }

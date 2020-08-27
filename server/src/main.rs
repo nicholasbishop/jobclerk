@@ -1,11 +1,9 @@
 use actix_web::{middleware, App, HttpServer};
 use actix_web::{web, HttpResponse, Responder};
 use askama::Template;
-use bb8_postgres::PostgresConnectionManager;
 use env_logger::Env;
 use fehler::throws;
-use jobclerk_api::{handle_request, Pool, DEFAULT_POSTGRES_PORT};
-use tokio_postgres::NoTls;
+use jobclerk_api::{handle_request, make_pool, Pool, DEFAULT_POSTGRES_PORT};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -49,16 +47,6 @@ pub fn app_config(config: &mut web::ServiceConfig) {
             .route("/projects", web::post().to(list_projects))
             .route("/api", web::post().to(handle_api_request)),
     );
-}
-
-#[throws]
-async fn make_pool(port: u16) -> Pool {
-    let db_manager = PostgresConnectionManager::new_from_stringlike(
-        format!("host=localhost user=postgres port={}", port),
-        NoTls,
-    )?;
-
-    Pool::builder().build(db_manager).await?
 }
 
 #[throws(anyhow::Error)]

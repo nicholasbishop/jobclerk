@@ -2,6 +2,7 @@
 
 members = [
   "api",
+  "lambda",
   "server",
   "tools",
   "types",
