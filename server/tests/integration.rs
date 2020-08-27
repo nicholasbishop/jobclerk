@@ -243,43 +243,34 @@ async fn integration_test() -> Result<(), Error> {
         Some(Response::AddJob(AddJobResponse { job_id: 2 }));
     check.call().await;
 
-    //     // Take the job
-    //     let req = test::TestRequest::post()
-    //         .uri("/api/projects/testproj/take-job")
-    //         .set_json(&TakeJobRequest {
-    //             project_name: "testproj".into(),
-    //             runner: "testrunner".into(),
-    //         })
-    //         .to_request();
-    //     let resp: Option<TakeJobResponse> =
-    //         test::read_response_json(&mut app, req).await;
-    //     let resp = resp.unwrap();
-    //     assert_eq!(resp.job_id, 2);
-    //     let token = resp.job_token.clone();
+    // Take the job
+    check.req = Request::TakeJob(TakeJobRequest {
+        project_name: "testproj".into(),
+        runner: "testrunner".into(),
+    });
+    check.expected_response = None;
+    let job = check.call().await.into_take_job().unwrap().unwrap();
+    assert_eq!(job.job_id, 2);
+    let token = job.job_token.clone();
 
-    //     // Sleep for 0.5 seconds which should be well past the heartbeat
-    //     // expiration
-    //     tokio::time::delay_for(tokio::time::Duration::from_millis(500)).await;
+    // Sleep for 0.5 seconds which should be well past the heartbeat
+    // expiration
+    tokio::time::delay_for(tokio::time::Duration::from_millis(500)).await;
 
-    //     // Poke the server to check for stuck jobs immediately (rather
-    //     // than waiting for the background thread to notice)
-    //     let req = test::TestRequest::post()
-    //         .uri("/api/handle-stuck-jobs")
-    //         .to_request();
-    //     let resp = test::call_service(&mut app, req).await;
-    //     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    // Poke the server to check for stuck jobs
+    check.req = Request::HandleStuckJobs;
+    check.expected_response = Some(Response::Empty);
+    check.call().await;
 
-    //     // Take the job again and verify the token has changed
-    //     let req = test::TestRequest::post()
-    //         .uri("/api/projects/testproj/take-job")
-    //         .set_json(&TakeJobRequest {
-    //             project_name: "testproj".into(),
-    //             runner: "testrunner".into(),
-    //         })
-    //         .to_request();
-    //     let resp: TakeJobResponse = test::read_response_json(&mut app, req).await;
-    //     assert_eq!(resp.job_id, 2);
-    //     assert_ne!(resp.job_token, token);
+    // Take the job again and verify the token has changed
+    check.req = Request::TakeJob(TakeJobRequest {
+        project_name: "testproj".into(),
+        runner: "testrunner".into(),
+    });
+    check.expected_response = None;
+    let job = check.call().await.into_take_job().unwrap().unwrap();
+    assert_eq!(job.job_id, 2);
+    assert_ne!(job.job_token, token);
 
     Ok(())
 }
