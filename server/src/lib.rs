@@ -1,5 +1,4 @@
 pub mod api;
-pub mod types;
 
 use actix_web::{web, HttpResponse, Responder};
 use askama::Template;
@@ -48,7 +47,7 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
 
 async fn handle_api_request(
     pool: web::Data<Pool>,
-    req: web::Json<types::Request>,
+    req: web::Json<jobclerk_types::Request>,
 ) -> impl Responder {
     HttpResponse::Ok().json(api::handle_request(pool.get_ref(), &req).await)
 }

@@ -2,9 +2,9 @@ use anyhow::{anyhow, Error};
 use chrono::{Duration, Utc};
 use env_logger::Env;
 use fehler::{throw, throws};
-use jobclerk_server::types::*;
 use jobclerk_server::{api, Pool};
 use jobclerk_server::{make_pool, DEFAULT_POSTGRES_PORT};
+use jobclerk_types::*;
 use serde_json::json;
 use std::process::Command;
 

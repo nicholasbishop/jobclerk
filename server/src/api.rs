@@ -1,6 +1,6 @@
-use crate::types::*;
 use crate::{Error, Pool};
 use fehler::{throw, throws};
+use jobclerk_types::*;
 use log::{error, info};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
