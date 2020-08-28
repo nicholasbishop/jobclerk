@@ -1,9 +1,21 @@
+use actix_web::body::Body;
 use actix_web::{middleware, App, HttpServer};
 use actix_web::{web, HttpResponse, Responder};
 use askama::Template;
 use env_logger::Env;
 use fehler::throws;
 use jobclerk_api::{handle_request, make_pool, Pool, DEFAULT_POSTGRES_PORT};
+use log::error;
+
+#[derive(Template)]
+#[template(path = "internal_error.html")]
+struct InternalErrorTemplate {}
+
+#[derive(Template)]
+#[template(path = "projects.html")]
+struct ProjectsTemplate {
+    projects: Vec<String>,
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -15,12 +27,19 @@ pub enum Error {
     Template(#[from] askama::Error),
 }
 
-impl actix_web::error::ResponseError for Error {}
-
-#[derive(Template)]
-#[template(path = "projects.html")]
-struct ProjectsTemplate {
-    projects: Vec<String>,
+impl actix_web::ResponseError for Error {
+    fn error_response(&self) -> HttpResponse<Body> {
+        error!("internal error: {}", self);
+        let template = InternalErrorTemplate {};
+        let body = match template.render() {
+            Ok(body) => body,
+            Err(err) => {
+                error!("template error: {}", err);
+                "error: failed to render error!".into()
+            }
+        };
+        HttpResponse::InternalServerError().body(body)
+    }
 }
 
 #[throws]
@@ -44,7 +63,7 @@ async fn handle_api_request(
 pub fn app_config(config: &mut web::ServiceConfig) {
     config.service(
         web::scope("")
-            .route("/projects", web::post().to(list_projects))
+            .route("/projects", web::get().to(list_projects))
             .route("/api", web::post().to(handle_api_request)),
     );
 }
