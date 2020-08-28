@@ -45,7 +45,7 @@ pub enum Response {
     AddJob(AddJobResponse),
     GetJob(GetJobResponse),
     GetJobs(GetJobsResponse),
-    TakeJob(Option<TakeJobResponse>),
+    TakeJob(TakeJobResponse),
     Empty,
 
     BadRequest(String),
@@ -85,7 +85,7 @@ impl Response {
     gen_conv!(add_job, AddJobResponse, Response::AddJob);
     gen_conv!(get_job, GetJobResponse, Response::GetJob);
     gen_conv!(get_jobs, GetJobsResponse, Response::GetJobs);
-    gen_conv!(take_job, Option<TakeJobResponse>, Response::TakeJob);
+    gen_conv!(take_job, TakeJobResponse, Response::TakeJob);
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -164,9 +164,14 @@ pub struct TakeJobRequest {
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct TakeJobResponse {
+pub struct TakeJobResponseJob {
     pub job_id: JobId,
     pub job_token: JobToken,
+}
+
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct TakeJobResponse {
+    pub job: Option<TakeJobResponseJob>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

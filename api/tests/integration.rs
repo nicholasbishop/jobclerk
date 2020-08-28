@@ -169,13 +169,14 @@ async fn integration_test() {
         runner: "testrunner".into(),
     }
     .into();
-    let job = check.call().await.into_take_job().unwrap().unwrap();
+    let job = check.call().await.into_take_job().unwrap().job.unwrap();
     assert_eq!(job.job_id, 1);
     let token = job.job_token.clone();
     assert_eq!(token.len(), 16);
 
     // Verify the job can't be taken again
-    check.expected_response = Some(Response::TakeJob(None));
+    check.expected_response =
+        Some(Response::TakeJob(TakeJobResponse { job: None }));
     check.call().await;
 
     // Send a heartbeat update
@@ -251,7 +252,7 @@ async fn integration_test() {
     }
     .into();
     check.expected_response = None;
-    let job = check.call().await.into_take_job().unwrap().unwrap();
+    let job = check.call().await.into_take_job().unwrap().job.unwrap();
     assert_eq!(job.job_id, 2);
     let token = job.job_token.clone();
 
@@ -271,7 +272,7 @@ async fn integration_test() {
     }
     .into();
     check.expected_response = None;
-    let job = check.call().await.into_take_job().unwrap().unwrap();
+    let job = check.call().await.into_take_job().unwrap().job.unwrap();
     assert_eq!(job.job_id, 2);
     assert_ne!(job.job_token, token);
 }

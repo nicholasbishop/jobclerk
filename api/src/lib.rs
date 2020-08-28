@@ -161,10 +161,7 @@ async fn add_job(pool: &Pool, req: &AddJobRequest) -> AddJobResponse {
 /// so that the runner can send updates. (Updates that do not include
 /// the correct token are rejected.)
 #[throws]
-async fn take_job(
-    pool: &Pool,
-    req: &TakeJobRequest,
-) -> Option<TakeJobResponse> {
+async fn take_job(pool: &Pool, req: &TakeJobRequest) -> TakeJobResponse {
     let token = make_random_string(16);
 
     let conn = pool.get().await?;
@@ -177,13 +174,15 @@ async fn take_job(
         .await?;
 
     if rows.is_empty() {
-        None
+        TakeJobResponse { job: None }
     } else {
         let row = &rows[0];
-        Some(TakeJobResponse {
-            job_id: row.get(0),
-            job_token: row.get(1),
-        })
+        TakeJobResponse {
+            job: Some(TakeJobResponseJob {
+                job_id: row.get(0),
+                job_token: row.get(1),
+            }),
+        }
     }
 }
 
