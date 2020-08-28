@@ -5,19 +5,13 @@ use askama::Template;
 use chrono::{DateTime, Utc};
 use env_logger::Env;
 use fehler::throws;
-use jobclerk_server::api::handle_request;
+use jobclerk_server::{api, ui};
 use jobclerk_server::{make_pool, Pool, DEFAULT_POSTGRES_PORT};
 use log::error;
 
 #[derive(Template)]
 #[template(path = "internal_error.html")]
 struct InternalErrorTemplate {}
-
-#[derive(Template)]
-#[template(path = "projects.html")]
-struct ProjectsTemplate {
-    projects: Vec<String>,
-}
 
 #[derive(Default)]
 struct JobSummary {
@@ -41,8 +35,13 @@ struct ProjectTemplate {
 pub enum Error {
     #[error("db error: {0}")]
     Db(#[from] tokio_postgres::Error),
+
+    #[error("server error: {0}")]
+    Server(#[from] jobclerk_server::Error),
+
     #[error("pool error: {0}")]
     Pool(#[from] bb8::RunError<tokio_postgres::Error>),
+
     #[error("template error: {0}")]
     Template(#[from] askama::Error),
 }
@@ -64,13 +63,7 @@ impl actix_web::ResponseError for Error {
 
 #[throws]
 async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
-    let conn = pool.get().await?;
-    let rows = conn.query("SELECT id, name FROM projects", &[]).await?;
-
-    let template = ProjectsTemplate {
-        projects: rows.iter().map(|row| row.get(1)).collect(),
-    };
-    HttpResponse::Ok().body(template.render()?)
+    HttpResponse::Ok().body(ui::list_projects(pool.get_ref()).await?)
 }
 
 fn format_duration(start: DateTime<Utc>, end: DateTime<Utc>) -> String {
@@ -172,7 +165,7 @@ async fn handle_api_request(
     pool: web::Data<Pool>,
     req: web::Json<jobclerk_types::Request>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(handle_request(pool.get_ref(), &req).await)
+    HttpResponse::Ok().json(api::handle_request(pool.get_ref(), &req).await)
 }
 
 pub fn app_config(config: &mut web::ServiceConfig) {
