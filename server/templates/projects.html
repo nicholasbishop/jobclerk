@@ -6,7 +6,7 @@
 <h1>Projects</h1>
 <ul>
   {% for project in self.projects %}
-  <li>{{project}}</li>
+  <li><a href="/projects/{{project}}">{{project}}</a></li>
   {% endfor %}
 </ul>
 {% endblock %}
