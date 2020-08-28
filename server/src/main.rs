@@ -74,7 +74,9 @@ async fn list_projects(pool: web::Data<Pool>) -> impl Responder {
 
 fn format_duration(start: DateTime<Utc>, end: DateTime<Utc>) -> String {
     let duration = if let Ok(duration) = (end - start).to_std() {
-        duration
+        // Round trip the number of seconds to clear out the subsecond
+        // fields
+        std::time::Duration::from_secs(duration.as_secs())
     } else {
         error!("invalid duration: start={}, end={}", start, end);
         std::time::Duration::default()

@@ -12,10 +12,22 @@ struct AddJob {
     data: serde_json::Value,
 }
 
+/// Start running an available job.
+#[derive(FromArgs)]
+#[argh(subcommand, name = "take-job")]
+struct TakeJob {
+    #[argh(positional)]
+    project_name: String,
+
+    #[argh(positional)]
+    runner: String,
+}
+
 #[derive(FromArgs)]
 #[argh(subcommand)]
 enum Command {
     AddJob(AddJob),
+    TakeJob(TakeJob),
 }
 
 /// Send a request to the server and print the response.
@@ -37,6 +49,10 @@ fn main() {
         Command::AddJob(opt) => Request::AddJob(AddJobRequest {
             project_name: opt.project_name,
             data: opt.data,
+        }),
+        Command::TakeJob(opt) => Request::TakeJob(TakeJobRequest {
+            project_name: opt.project_name,
+            runner: opt.runner,
         }),
     };
 
