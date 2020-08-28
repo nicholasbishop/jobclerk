@@ -5,8 +5,12 @@ authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+jobclerk-types = { path = "../types" }
+
 anyhow = "1.0"
 argh = "0.1"
 fehler = "1.0"
+serde_json = "1.0"
 tokio = { version = "0.2", features = ["macros"] }
 tokio-postgres = { version = "0.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
+ureq = { version = "1.4", features = ["json"] }
