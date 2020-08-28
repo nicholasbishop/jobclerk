@@ -14,12 +14,6 @@ macro_rules! into_request {
                 Request::$variant(request)
             }
         }
-
-        impl $name {
-            pub fn into_request(self) -> Request {
-                Request::$variant(self)
-            }
-        }
     };
 }
 

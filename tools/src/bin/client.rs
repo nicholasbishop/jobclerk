@@ -86,23 +86,23 @@ fn main() {
     let opt: Opt = argh::from_env();
     let url = format!("{}/api", opt.base_url);
 
-    let req = match opt.command {
+    let req: Request = match opt.command {
         Command::AddProject(opt) => AddProjectRequest {
             name: opt.name,
             data: opt.data,
             heartbeat_expiration_millis: opt.grace_period * 1000,
         }
-        .into_request(),
+        .into(),
         Command::AddJob(opt) => AddJobRequest {
             project_name: opt.project_name,
             data: opt.data,
         }
-        .into_request(),
+        .into(),
         Command::TakeJob(opt) => TakeJobRequest {
             project_name: opt.project_name,
             runner: opt.runner,
         }
-        .into_request(),
+        .into(),
         Command::UpdateJob(opt) => UpdateJobRequest {
             project_name: opt.project_name,
             job_id: opt.job_id,
@@ -110,7 +110,7 @@ fn main() {
             data: opt.data,
             token: opt.token,
         }
-        .into_request(),
+        .into(),
     };
 
     let resp = ureq::post(&url).send_json(
