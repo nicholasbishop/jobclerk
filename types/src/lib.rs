@@ -7,6 +7,22 @@ pub type JobId = i64;
 pub type JobToken = String;
 pub type ProjectId = i64;
 
+macro_rules! into_request {
+    ($name:ident, $variant:ident) => {
+        impl From<$name> for Request {
+            fn from(request: $name) -> Request {
+                Request::$variant(request)
+            }
+        }
+
+        impl $name {
+            pub fn into_request(self) -> Request {
+                Request::$variant(self)
+            }
+        }
+    };
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Request {
     AddProject(AddProjectRequest),
@@ -19,6 +35,13 @@ pub enum Request {
 
     HandleStuckJobs,
 }
+
+into_request!(AddProjectRequest, AddProject);
+into_request!(AddJobRequest, AddJob);
+into_request!(GetJobRequest, GetJob);
+into_request!(GetJobsRequest, GetJobs);
+into_request!(TakeJobRequest, TakeJob);
+into_request!(UpdateJobRequest, UpdateJob);
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Response {

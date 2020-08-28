@@ -69,21 +69,24 @@ fn main() {
     let url = format!("{}/api", opt.base_url);
 
     let req = match opt.command {
-        Command::AddJob(opt) => Request::AddJob(AddJobRequest {
+        Command::AddJob(opt) => AddJobRequest {
             project_name: opt.project_name,
             data: opt.data,
-        }),
-        Command::TakeJob(opt) => Request::TakeJob(TakeJobRequest {
+        }
+        .into_request(),
+        Command::TakeJob(opt) => TakeJobRequest {
             project_name: opt.project_name,
             runner: opt.runner,
-        }),
-        Command::UpdateJob(opt) => Request::UpdateJob(UpdateJobRequest {
+        }
+        .into_request(),
+        Command::UpdateJob(opt) => UpdateJobRequest {
             project_name: opt.project_name,
             job_id: opt.job_id,
             state: opt.state,
             data: opt.data,
             token: opt.token,
-        }),
+        }
+        .into_request(),
     };
 
     let resp = ureq::post(&url).send_json(

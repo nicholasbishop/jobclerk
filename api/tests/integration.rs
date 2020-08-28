@@ -108,11 +108,12 @@ async fn integration_test() {
     // Create a project
     let mut check = CheckRequest {
         pool,
-        req: Request::AddProject(AddProjectRequest {
+        req: AddProjectRequest {
             name: "testproj".into(),
             heartbeat_expiration_millis: 250, // 0.25 seconds
             data: json!({}),
-        }),
+        }
+        .into(),
         expected_response: Some(Response::AddProject(AddProjectResponse {
             project_id: 1,
         })),
@@ -121,20 +122,22 @@ async fn integration_test() {
     check.call().await;
 
     // Create a job
-    check.req = Request::AddJob(AddJobRequest {
+    check.req = AddJobRequest {
         project_name: "testproj".into(),
         data: json!({
             "hello": "world",
         }),
-    });
+    }
+    .into();
     check.expected_response =
         Some(Response::AddJob(AddJobResponse { job_id: 1 }));
     check.call().await;
 
     // List jobs
-    check.req = Request::GetJobs(GetJobsRequest {
+    check.req = GetJobsRequest {
         project_name: "testproj".into(),
-    });
+    }
+    .into();
     check.expected_response = None;
     let jobs = check.call().await.into_get_jobs().unwrap();
     assert_eq!(jobs.len(), 1);
@@ -161,10 +164,11 @@ async fn integration_test() {
     );
 
     // Take a job
-    check.req = Request::TakeJob(TakeJobRequest {
+    check.req = TakeJobRequest {
         project_name: "testproj".into(),
         runner: "testrunner".into(),
-    });
+    }
+    .into();
     let job = check.call().await.into_take_job().unwrap().unwrap();
     assert_eq!(job.job_id, 1);
     let token = job.job_token.clone();
@@ -175,70 +179,77 @@ async fn integration_test() {
     check.call().await;
 
     // Send a heartbeat update
-    check.req = Request::UpdateJob(UpdateJobRequest {
+    check.req = UpdateJobRequest {
         project_name: "testproj".into(),
         job_id: 1,
         token: token.clone(),
         state: None,
         data: None,
-    });
+    }
+    .into();
     check.expected_response = Some(Response::Empty);
     check.call().await;
 
     // Verify that the job's JSON data was not changed
-    check.req = Request::GetJob(GetJobRequest {
+    check.req = GetJobRequest {
         project_name: "testproj".into(),
         job_id: 1,
-    });
+    }
+    .into();
     check.expected_response = None;
     let resp = check.call().await.into_get_job().unwrap();
     assert_eq!(resp.data, json!({"hello": "world"}));
 
     // Update the job data
-    check.req = Request::UpdateJob(UpdateJobRequest {
+    check.req = UpdateJobRequest {
         project_name: "testproj".into(),
         job_id: 1,
         token: token.clone(),
         state: None,
         data: Some(json!({"hello": "test"})),
-    });
+    }
+    .into();
     check.expected_response = Some(Response::Empty);
     check.call().await;
 
     // Verify that the job's JSON data was changed
-    check.req = Request::GetJob(GetJobRequest {
+    check.req = GetJobRequest {
         project_name: "testproj".into(),
         job_id: 1,
-    });
+    }
+    .into();
     check.expected_response = None;
     let resp = check.call().await.into_get_job().unwrap();
     assert_eq!(resp.data, json!({"hello": "test"}));
 
     // Mark the job as finished
-    check.req = Request::UpdateJob(UpdateJobRequest {
+    check.req = UpdateJobRequest {
         project_name: "testproj".into(),
         job_id: 1,
         token,
         state: Some(JobState::Succeeded),
         data: None,
-    });
+    }
+    .into();
     check.expected_response = Some(Response::Empty);
     check.call().await;
 
     // Create a second job
-    check.req = Request::AddJob(AddJobRequest {
+    check.req = AddJobRequest {
         project_name: "testproj".into(),
         data: json!({}),
-    });
+    }
+    .into();
     check.expected_response =
         Some(Response::AddJob(AddJobResponse { job_id: 2 }));
     check.call().await;
 
     // Take the job
-    check.req = Request::TakeJob(TakeJobRequest {
+    check.req = TakeJobRequest {
         project_name: "testproj".into(),
         runner: "testrunner".into(),
-    });
+    }
+    .into();
     check.expected_response = None;
     let job = check.call().await.into_take_job().unwrap().unwrap();
     assert_eq!(job.job_id, 2);
@@ -254,10 +265,11 @@ async fn integration_test() {
     check.call().await;
 
     // Take the job again and verify the token has changed
-    check.req = Request::TakeJob(TakeJobRequest {
+    check.req = TakeJobRequest {
         project_name: "testproj".into(),
         runner: "testrunner".into(),
-    });
+    }
+    .into();
     check.expected_response = None;
     let job = check.call().await.into_take_job().unwrap().unwrap();
     assert_eq!(job.job_id, 2);
