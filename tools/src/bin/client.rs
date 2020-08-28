@@ -23,11 +23,34 @@ struct TakeJob {
     runner: String,
 }
 
+/// Update a running job.
+#[derive(FromArgs)]
+#[argh(subcommand, name = "update-job")]
+struct UpdateJob {
+    #[argh(positional)]
+    project_name: String,
+
+    #[argh(positional)]
+    job_id: JobId,
+
+    #[argh(positional)]
+    token: JobToken,
+
+    /// set the job state
+    #[argh(option)]
+    state: Option<JobState>,
+
+    /// set the job data
+    #[argh(positional)]
+    data: Option<serde_json::Value>,
+}
+
 #[derive(FromArgs)]
 #[argh(subcommand)]
 enum Command {
     AddJob(AddJob),
     TakeJob(TakeJob),
+    UpdateJob(UpdateJob),
 }
 
 /// Send a request to the server and print the response.
@@ -53,6 +76,13 @@ fn main() {
         Command::TakeJob(opt) => Request::TakeJob(TakeJobRequest {
             project_name: opt.project_name,
             runner: opt.runner,
+        }),
+        Command::UpdateJob(opt) => Request::UpdateJob(UpdateJobRequest {
+            project_name: opt.project_name,
+            job_id: opt.job_id,
+            state: opt.state,
+            data: opt.data,
+            token: opt.token,
         }),
     };
 
