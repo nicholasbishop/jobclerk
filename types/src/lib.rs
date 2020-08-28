@@ -74,14 +74,6 @@ response_from!(TakeJob);
 macro_rules! gen_conv {
     ($name:ident, $ret:ty, $resptype:path) => {
         paste! {
-            pub fn [<as_ $name>](&self) -> Option<&$ret> {
-                if let $resptype(resp) = self {
-                    Some(resp)
-                } else {
-                    None
-                }
-            }
-
             pub fn [<into_ $name>](self) -> Option<$ret> {
                 if let $resptype(resp) = self {
                     Some(resp)
