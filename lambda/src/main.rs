@@ -1,7 +1,6 @@
 use env_logger::Env;
-use jobclerk_server::api::{
-    handle_request, make_pool, Pool, DEFAULT_POSTGRES_PORT,
-};
+use jobclerk_server::api::handle_request;
+use jobclerk_server::{make_pool, Pool, DEFAULT_POSTGRES_PORT};
 use jobclerk_types::{Request, Response};
 use lambda::{handler_fn, Context};
 use once_cell::sync::OnceCell;

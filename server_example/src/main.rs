@@ -5,9 +5,8 @@ use askama::Template;
 use chrono::{DateTime, Utc};
 use env_logger::Env;
 use fehler::throws;
-use jobclerk_server::api::{
-    handle_request, make_pool, Pool, DEFAULT_POSTGRES_PORT,
-};
+use jobclerk_server::api::handle_request;
+use jobclerk_server::{make_pool, Pool, DEFAULT_POSTGRES_PORT};
 use log::error;
 
 #[derive(Template)]
