@@ -22,7 +22,7 @@ struct ProjectsTemplate {
 struct JobSummary {
     job_id: i64,
     duration: String,
-    data: String,
+    data: serde_json::Value,
     runner: String,
     state: String,
 }
