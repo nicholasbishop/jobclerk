@@ -1,9 +1,9 @@
 [workspace]
 
 members = [
-  "api",
   "lambda",
   "server",
+  "server_example",
   "tools",
   "types",
 ]

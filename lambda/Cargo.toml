@@ -5,7 +5,7 @@ authors = ["Nicholas Bishop <nicholasbishop@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-jobclerk-api = { path = "../api" }
+jobclerk-server = { path = "../server" }
 jobclerk-types = { path = "../types" }
 
 env_logger = "0.7"

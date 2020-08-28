@@ -1121,7 +1121,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
-name = "jobclerk-api"
+name = "jobclerk-lambda"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "jobclerk-server",
+ "jobclerk-types",
+ "lambda",
+ "once_cell",
+ "tokio",
+]
+
+[[package]]
+name = "jobclerk-server"
 version = "0.1.0"
 dependencies = [
  "bb8",
@@ -1140,19 +1152,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jobclerk-lambda"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "jobclerk-api",
- "jobclerk-types",
- "lambda",
- "once_cell",
- "tokio",
-]
-
-[[package]]
-name = "jobclerk-server"
+name = "jobclerk-server-example"
 version = "0.1.0"
 dependencies = [
  "actix-rt",
@@ -1164,7 +1164,7 @@ dependencies = [
  "env_logger",
  "fehler",
  "humantime 2.0.1",
- "jobclerk-api",
+ "jobclerk-server",
  "jobclerk-types",
  "log",
  "serde_json",

@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use env_logger::Env;
-use jobclerk_api::{handle_request, make_pool, Pool};
+use jobclerk_server::{handle_request, make_pool, Pool};
 use jobclerk_types::*;
 use serde_json::json;
 use std::process::Command;
