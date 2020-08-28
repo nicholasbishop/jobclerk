@@ -71,7 +71,7 @@ response_from!(GetJob);
 response_from!(GetJobs);
 response_from!(TakeJob);
 
-macro_rules! gen_conv {
+macro_rules! response_into {
     ($name:ident, $ret:ty, $resptype:path) => {
         paste! {
             pub fn [<into_ $name>](self) -> Option<$ret> {
@@ -91,11 +91,11 @@ impl Response {
                  Response::InternalError)
     }
 
-    gen_conv!(add_project, AddProjectResponse, Response::AddProject);
-    gen_conv!(add_job, AddJobResponse, Response::AddJob);
-    gen_conv!(get_job, GetJobResponse, Response::GetJob);
-    gen_conv!(get_jobs, GetJobsResponse, Response::GetJobs);
-    gen_conv!(take_job, TakeJobResponse, Response::TakeJob);
+    response_into!(add_project, AddProjectResponse, Response::AddProject);
+    response_into!(add_job, AddJobResponse, Response::AddJob);
+    response_into!(get_job, GetJobResponse, Response::GetJob);
+    response_into!(get_jobs, GetJobsResponse, Response::GetJobs);
+    response_into!(take_job, TakeJobResponse, Response::TakeJob);
 }
 
 #[derive(Debug, Deserialize, Serialize)]
