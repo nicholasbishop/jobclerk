@@ -1,6 +1,22 @@
 use argh::FromArgs;
 use jobclerk_types::*;
 
+/// Create a project.
+#[derive(FromArgs)]
+#[argh(subcommand, name = "add-project")]
+struct AddProject {
+    #[argh(positional)]
+    name: String,
+
+    /// length of time in seconds before jobs are considered stuck
+    #[argh(option, default = "30")]
+    grace_period: i32,
+
+    /// set the project data
+    #[argh(option, default = "serde_json::json!({})")]
+    data: serde_json::Value,
+}
+
 /// Create a job within a project.
 #[derive(FromArgs)]
 #[argh(subcommand, name = "add-job")]
@@ -41,13 +57,15 @@ struct UpdateJob {
     state: Option<JobState>,
 
     /// set the job data
-    #[argh(positional)]
+    #[argh(option)]
     data: Option<serde_json::Value>,
 }
 
 #[derive(FromArgs)]
 #[argh(subcommand)]
 enum Command {
+    AddProject(AddProject),
+
     AddJob(AddJob),
     TakeJob(TakeJob),
     UpdateJob(UpdateJob),
@@ -69,6 +87,12 @@ fn main() {
     let url = format!("{}/api", opt.base_url);
 
     let req = match opt.command {
+        Command::AddProject(opt) => AddProjectRequest {
+            name: opt.name,
+            data: opt.data,
+            heartbeat_expiration_millis: opt.grace_period * 1000,
+        }
+        .into_request(),
         Command::AddJob(opt) => AddJobRequest {
             project_name: opt.project_name,
             data: opt.data,
