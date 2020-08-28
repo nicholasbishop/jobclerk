@@ -139,9 +139,9 @@ async fn integration_test() {
     }
     .into();
     check.expected_response = None;
-    let jobs = check.call().await.into_get_jobs().unwrap();
-    assert_eq!(jobs.len(), 1);
-    let job = &jobs[0];
+    let resp = check.call().await.into_get_jobs().unwrap();
+    assert_eq!(resp.jobs.len(), 1);
+    let job = &resp.jobs[0];
     // Check the created time separately since there's wiggle room
     assert!(
         Utc::now().signed_duration_since(job.created) < Duration::seconds(1)
@@ -198,7 +198,7 @@ async fn integration_test() {
     .into();
     check.expected_response = None;
     let resp = check.call().await.into_get_job().unwrap();
-    assert_eq!(resp.data, json!({"hello": "world"}));
+    assert_eq!(resp.job.data, json!({"hello": "world"}));
 
     // Update the job data
     check.req = UpdateJobRequest {
@@ -220,7 +220,7 @@ async fn integration_test() {
     .into();
     check.expected_response = None;
     let resp = check.call().await.into_get_job().unwrap();
-    assert_eq!(resp.data, json!({"hello": "test"}));
+    assert_eq!(resp.job.data, json!({"hello": "test"}));
 
     // Mark the job as finished
     check.req = UpdateJobRequest {

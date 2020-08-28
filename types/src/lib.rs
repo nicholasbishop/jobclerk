@@ -41,8 +41,8 @@ request_from!(UpdateJob, UpdateJobRequest);
 pub enum Response {
     AddProject(AddProjectResponse),
     AddJob(AddJobResponse),
-    GetJob(Job),
-    GetJobs(Vec<Job>),
+    GetJob(GetJobResponse),
+    GetJobs(GetJobsResponse),
     TakeJob(Option<TakeJobResponse>),
     Empty,
 
@@ -81,8 +81,8 @@ impl Response {
 
     gen_conv!(add_project, AddProjectResponse, Response::AddProject);
     gen_conv!(add_job, AddJobResponse, Response::AddJob);
-    gen_conv!(get_job, Job, Response::GetJob);
-    gen_conv!(get_jobs, Vec<Job>, Response::GetJobs);
+    gen_conv!(get_job, GetJobResponse, Response::GetJob);
+    gen_conv!(get_jobs, GetJobsResponse, Response::GetJobs);
     gen_conv!(take_job, Option<TakeJobResponse>, Response::TakeJob);
 }
 
@@ -129,9 +129,19 @@ pub struct GetJobRequest {
     pub job_id: JobId,
 }
 
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct GetJobResponse {
+    pub job: Job,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetJobsRequest {
     pub project_name: String,
+}
+
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct GetJobsResponse {
+    pub jobs: Vec<Job>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

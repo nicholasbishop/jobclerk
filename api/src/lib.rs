@@ -70,7 +70,7 @@ async fn add_project(
 }
 
 #[throws]
-async fn get_job(pool: &Pool, req: &GetJobRequest) -> Job {
+async fn get_job(pool: &Pool, req: &GetJobRequest) -> GetJobResponse {
     let conn = pool.get().await?;
     let rows = conn
         .query(
@@ -87,22 +87,24 @@ async fn get_job(pool: &Pool, req: &GetJobRequest) -> Job {
     } else {
         let row = &rows[0];
         let state: String = row.get(2);
-        Job {
-            id: row.get(0),
-            project_name: req.project_name.clone(),
-            project_id: row.get(1),
-            state: state.parse()?,
-            created: row.get(3),
-            started: row.get(4),
-            finished: row.get(5),
-            priority: row.get(6),
-            data: row.get(7),
+        GetJobResponse {
+            job: Job {
+                id: row.get(0),
+                project_name: req.project_name.clone(),
+                project_id: row.get(1),
+                state: state.parse()?,
+                created: row.get(3),
+                started: row.get(4),
+                finished: row.get(5),
+                priority: row.get(6),
+                data: row.get(7),
+            },
         }
     }
 }
 
 #[throws]
-async fn get_jobs(pool: &Pool, req: &GetJobsRequest) -> Vec<Job> {
+async fn get_jobs(pool: &Pool, req: &GetJobsRequest) -> GetJobsResponse {
     let conn = pool.get().await?;
     let rows = conn
         .query(
@@ -131,7 +133,7 @@ async fn get_jobs(pool: &Pool, req: &GetJobsRequest) -> Vec<Job> {
         })
         .collect::<Result<Vec<Job>, _>>()?;
 
-    jobs
+    GetJobsResponse { jobs }
 }
 
 #[throws]
