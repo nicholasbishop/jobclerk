@@ -260,10 +260,10 @@ async fn handle_request_ok(pool: &Pool, req: &Request) -> Response {
             Response::AddProject(add_project(pool, req).await?)
         }
 
-        Request::AddJob(req) => Response::AddJob(add_job(pool, req).await?),
-        Request::GetJob(req) => Response::GetJob(get_job(pool, req).await?),
-        Request::GetJobs(req) => Response::GetJobs(get_jobs(pool, req).await?),
-        Request::TakeJob(req) => Response::TakeJob(take_job(pool, req).await?),
+        Request::AddJob(req) => add_job(pool, req).await?.into(),
+        Request::GetJob(req) => get_job(pool, req).await?.into(),
+        Request::GetJobs(req) => get_jobs(pool, req).await?.into(),
+        Request::TakeJob(req) => take_job(pool, req).await?.into(),
         Request::UpdateJob(req) => {
             update_job(pool, req).await?;
             Response::Empty

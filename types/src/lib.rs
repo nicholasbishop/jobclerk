@@ -19,6 +19,18 @@ macro_rules! request_from {
     };
 }
 
+macro_rules! response_from {
+    ($name:ident) => {
+        paste! {
+            impl From<[<$name Response>]> for Response {
+                fn from(request: [<$name Response>]) -> Response {
+                    Response::$name(request)
+                }
+            }
+        }
+    };
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Request {
     AddProject(AddProjectRequest),
@@ -52,6 +64,12 @@ pub enum Response {
     NotFound,
     InternalError,
 }
+
+response_from!(AddProject);
+response_from!(AddJob);
+response_from!(GetJob);
+response_from!(GetJobs);
+response_from!(TakeJob);
 
 macro_rules! gen_conv {
     ($name:ident, $ret:ty, $resptype:path) => {

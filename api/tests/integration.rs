@@ -114,9 +114,7 @@ async fn integration_test() {
             data: json!({}),
         }
         .into(),
-        expected_response: Some(Response::AddProject(AddProjectResponse {
-            project_id: 1,
-        })),
+        expected_response: Some(AddProjectResponse { project_id: 1 }.into()),
         check_error: true,
     };
     check.call().await;
@@ -129,8 +127,7 @@ async fn integration_test() {
         }),
     }
     .into();
-    check.expected_response =
-        Some(Response::AddJob(AddJobResponse { job_id: 1 }));
+    check.expected_response = Some(AddJobResponse { job_id: 1 }.into());
     check.call().await;
 
     // List jobs
@@ -175,8 +172,7 @@ async fn integration_test() {
     assert_eq!(token.len(), 16);
 
     // Verify the job can't be taken again
-    check.expected_response =
-        Some(Response::TakeJob(TakeJobResponse { job: None }));
+    check.expected_response = Some(TakeJobResponse { job: None }.into());
     check.call().await;
 
     // Send a heartbeat update
@@ -241,8 +237,7 @@ async fn integration_test() {
         data: json!({}),
     }
     .into();
-    check.expected_response =
-        Some(Response::AddJob(AddJobResponse { job_id: 2 }));
+    check.expected_response = Some(AddJobResponse { job_id: 2 }.into());
     check.call().await;
 
     // Take the job
