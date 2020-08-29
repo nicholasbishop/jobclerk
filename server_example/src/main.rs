@@ -1,16 +1,11 @@
 use actix_web::body::Body;
 use actix_web::{middleware, App, HttpServer};
 use actix_web::{web, HttpResponse, Responder};
-use askama::Template;
 use env_logger::Env;
 use fehler::throws;
 use jobclerk_server::{api, ui};
 use jobclerk_server::{make_pool, Pool, DEFAULT_POSTGRES_PORT};
 use log::error;
-
-#[derive(Template)]
-#[template(path = "internal_error.html")]
-struct InternalErrorTemplate {}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -30,15 +25,7 @@ pub enum Error {
 impl actix_web::ResponseError for Error {
     fn error_response(&self) -> HttpResponse<Body> {
         error!("internal error: {}", self);
-        let template = InternalErrorTemplate {};
-        let body = match template.render() {
-            Ok(body) => body,
-            Err(err) => {
-                error!("template error: {}", err);
-                "error: failed to render error!".into()
-            }
-        };
-        HttpResponse::InternalServerError().body(body)
+        HttpResponse::InternalServerError().body(ui::internal_error())
     }
 }
 
