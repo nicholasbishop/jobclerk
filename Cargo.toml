@@ -3,7 +3,6 @@
 members = [
   "lambda",
   "server",
-  "server_example",
   "tools",
   "types",
 ]
