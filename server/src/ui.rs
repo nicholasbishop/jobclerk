@@ -5,6 +5,21 @@ use fehler::throws;
 use log::error;
 
 #[derive(Template)]
+#[template(path = "internal_error.html")]
+struct InternalErrorTemplate {}
+
+pub fn internal_error() -> String {
+    let template = InternalErrorTemplate {};
+    match template.render() {
+        Ok(body) => body,
+        Err(err) => {
+            error!("template error: {}", err);
+            "error: failed to render error!".into()
+        }
+    }
+}
+
+#[derive(Template)]
 #[template(path = "projects.html")]
 struct ProjectsTemplate {
     projects: Vec<String>,
